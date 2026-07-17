@@ -13,7 +13,8 @@ window.Auth={
   token(){return localStorage.getItem('session_token')},
   redirectToLogin(){
     this.clear();
-    const prefix=location.pathname.includes('/dashboard/')?'../':'';
+    const path=location.pathname.replace(/\/+/g,'/');
+    const prefix=/(\/dashboard\/|\/campaign\/|\/creative\/)/.test(path)?'../':'';
     location.href=prefix+'index.html';
   }
 };

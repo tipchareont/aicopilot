@@ -35,12 +35,23 @@ function loadFilterState(){ try{ const v=JSON.parse(localStorage.getItem(FILTER_
 function resetFilterState(){ state.days=7; state.customFrom=''; state.customTo=''; state.filters={game:'',account:'',objective:''}; state.trendMetric='spend'; state.pages={campaign:1,creative:1}; localStorage.removeItem(FILTER_KEY); document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days==='7')); el('customRange').classList.add('hidden'); el('dateFrom').value=''; el('dateTo').value=''; if(el('trendMetric'))el('trendMetric').value='spend'; buildFilterOptions(); renderAll(); }
 function hydrate(response){
   if(!response?.success || !response?.dashboard) throw new Error(response?.message || 'Dashboard payload ไม่ถูกต้อง');
-  state.response=response;
-  state.rows={account:rows(response.dashboard.account),campaign:rows(response.dashboard.campaign),creative:rows(response.dashboard.creative),creativeGroup:rows(response.dashboard.creative_group)};
-  renderUser(response); buildFilterOptions(); renderAll();
+  const nextRows={account:rows(response.dashboard.account),campaign:rows(response.dashboard.campaign),creative:rows(response.dashboard.creative),creativeGroup:rows(response.dashboard.creative_group)};
+  state.rows=nextRows;
+  renderUser(response);
+  buildFilterOptions();
+  // Reveal the page before heavy rendering so a widget error cannot trap users on the loading screen.
+  el('loading')?.classList.add('hidden');
+  el('shell')?.classList.remove('hidden');
+  try {
+    renderAll();
+  } catch (error) {
+    console.error('Dashboard render error:', error);
+    text('dashboardUpdatedAt','โหลดข้อมูลสำเร็จ แต่บางส่วนแสดงผลไม่ครบ');
+  }
   text('dashboardUpdatedAt',`อัปเดต ${formatDateTime(updatedAt(response) || new Date().toISOString())}`);
-  el('loading')?.classList.add('hidden'); el('shell')?.classList.remove('hidden');
+  state.response=response;
 }
+
 
 function renderUser(response){ const user=response?.user || {}; const username=user.username || firstStored(['username','Username']) || '-'; const display=firstStored(['display_name','displayName']) || username; const role=firstStored(['role','user_role']) || 'USER'; text('displayName',display); text('role',String(role).toUpperCase()); }
 function uniqueSorted(values){ return [...new Set(values.filter(Boolean).map(String))].sort((a,b)=>a.localeCompare(b,'th')); }
@@ -97,13 +108,13 @@ function campaignStatus(item,medianCpr){ if(item.totals.results===0 && item.tota
 function paginate(items,type){ const totalPages=Math.max(1,Math.ceil(items.length/state.pageSize)); state.pages[type]=Math.min(Math.max(1,state.pages[type]),totalPages); const start=(state.pages[type]-1)*state.pageSize; return {items:items.slice(start,start+state.pageSize),totalPages}; }
 function renderCampaignTable(){
   const grouped=groupRows(filtered('campaign'),campaignKey).sort((a,b)=>b.totals.spend-a.totals.spend); const cprs=grouped.map(x=>x.totals.cpr).filter(x=>x>0).sort((a,b)=>a-b); const median=cprs.length?cprs[Math.floor(cprs.length/2)]:0; text('campaignTableBadge',`${integer(grouped.length)} campaigns`);
-  const page=paginate(grouped,'campaign'); text('campaignPageInfo',`หน้า ${state.pages.campaign} / ${page.totalPages} · ${integer(grouped.length)} รายการ`); el('campaignPrev').disabled=state.pages.campaign<=1; el('campaignNext').disabled=state.pages.campaign>=page.totalPages;
+  const page=paginate(grouped,'campaign'); text('campaignPageInfo',`หน้า ${state.pages.campaign} / ${page.totalPages} · ${integer(grouped.length)} รายการ`); if(el('campaignPrev')) el('campaignPrev').disabled=state.pages.campaign<=1; if(el('campaignNext')) el('campaignNext').disabled=state.pages.campaign>=page.totalPages;
   const body=el('campaignTableBody'); if(!grouped.length){ body.innerHTML='<tr><td colspan="11" class="table-empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }
   body.innerHTML=page.items.map(item=>{ const r=item.sample; const status=campaignStatus(item,median); return `<tr><td>${escapeHtml(field(r,['Campaign_Name','Entity_Name'],item.key))}</td><td>${escapeHtml(field(r,['Game_Name','Game_ID'],'-'))}</td><td>${escapeHtml(field(r,['Account_Name','Ad_Account_Name'],'-'))}</td><td>${escapeHtml(field(r,['Objective_Display','Objective'],'-'))}</td><td>฿${money(item.totals.spend)}</td><td>${integer(item.totals.results)}</td><td>฿${money(item.totals.cpr)}</td><td>${percent(item.totals.ctr)}</td><td>${integer(item.totals.lpv)}</td><td>฿${money(item.totals.cplpv)}</td><td><span class="status-pill ${status.cls}">${status.label}</span></td></tr>`; }).join('');
 }
 function renderCreativeTable(){
-  const grouped=groupRows(filtered('creative'),creativeKey).sort((a,b)=>b.totals.spend-a.totals.spend); text('creativeTableBadge',`${integer(grouped.length)} creatives`); const page=paginate(grouped,'creative'); text('creativePageInfo',`หน้า ${state.pages.creative} / ${page.totalPages} · ${integer(grouped.length)} รายการ`); el('creativePrev').disabled=state.pages.creative<=1; el('creativeNext').disabled=state.pages.creative>=page.totalPages; const body=el('creativeTableBody'); if(!grouped.length){ body.innerHTML='<tr><td colspan="9" class="table-empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }
-  body.innerHTML=page.items.map(item=>{ const r=item.sample; const ctr=item.totals.ctr || metric(r,'ctr'); const frequency=metric(r,'frequency'); const name=field(r,['Ad_Name','Creative_Name','Entity_Name'],item.key); return `<tr><td>${escapeHtml(field(r,['Creative_Group_Name'],'-'))}</td><td><div class="creative-cell"><div class="thumb">IMG</div><span>${escapeHtml(name)}</span></div></td><td>${escapeHtml(field(r,['Campaign_Name'],'-'))}</td><td>${escapeHtml(field(r,['Objective_Display','Objective'],'-'))}</td><td>฿${money(item.totals.spend)}</td><td>${integer(item.totals.results)}</td><td>฿${money(item.totals.cpr)}</td><td>${percent(ctr)}</td><td>${frequency?frequency.toFixed(2):'-'}</td></tr>`; }).join('');
+  const grouped=groupRows(filtered('creative'),creativeKey).sort((a,b)=>b.totals.spend-a.totals.spend); text('creativeTableBadge',`${integer(grouped.length)} creatives`); const page=paginate(grouped,'creative'); text('creativePageInfo',`หน้า ${state.pages.creative} / ${page.totalPages} · ${integer(grouped.length)} รายการ`); if(el('creativePrev')) el('creativePrev').disabled=state.pages.creative<=1; if(el('creativeNext')) el('creativeNext').disabled=state.pages.creative>=page.totalPages; const body=el('creativeTableBody'); if(!grouped.length){ body.innerHTML='<tr><td colspan="9" class="table-empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }
+  body.innerHTML=page.items.map(item=>{ const r=item.sample; const ctr=item.totals.ctr || metric(r,'ctr'); const frequency=metric(r,'frequency'); const name=field(r,['Ad_Name','Creative_Name','Entity_Name'],item.key); const thumbUrl=field(r,['Thumbnail_URL','Image_URL','Creative_Thumbnail_URL','Picture_URL','picture','thumbnail_url'],''); const thumb=thumbUrl?`<div class="thumb"><img src="${escapeHtml(thumbUrl)}" alt="Creative thumbnail" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:9px" onerror="this.parentElement.textContent='IMG'"></div>`:'<div class="thumb">IMG</div>'; return `<tr><td>${escapeHtml(field(r,['Creative_Group_Name'],'-'))}</td><td><div class="creative-cell">${thumb}<span>${escapeHtml(name)}</span></div></td><td>${escapeHtml(field(r,['Campaign_Name'],'-'))}</td><td>${escapeHtml(field(r,['Objective_Display','Objective'],'-'))}</td><td>฿${money(item.totals.spend)}</td><td>${integer(item.totals.results)}</td><td>฿${money(item.totals.cpr)}</td><td>${percent(ctr)}</td><td>${frequency?frequency.toFixed(2):'-'}</td></tr>`; }).join('');
 }
 function renderActions(){ /* Intentionally deferred: AI Decision Engine backend will populate this section. */ }
 function renderAll(){ state.pages.campaign=Math.max(1,state.pages.campaign); state.pages.creative=Math.max(1,state.pages.creative); renderKpis(); renderTrend(); renderDistribution(); renderCampaignTable(); renderCreativeTable(); saveFilterState(); }
@@ -114,16 +125,36 @@ function readCache(){ try{ const value=JSON.parse(localStorage.getItem(cacheKey(
 function clearCache(){ Object.keys(localStorage).filter(k=>k.startsWith(CACHE_PREFIX)).forEach(k=>localStorage.removeItem(k)); }
 function setRefreshLoading(on){ const button=el('refreshDashboardButton'); if(!button)return; button.disabled=on; button.textContent=on?'กำลังรีเฟรช...':'รีเฟรชข้อมูล'; }
 async function sync(){ setRefreshLoading(true); try{ const result=await fetchDashboard(); saveCache(result); hydrate(result); }catch(error){ console.error(error); if([401,403].includes(error.httpStatus)){ clearCache(); redirectLogin(); } else if(!state.response){ text('loadingMessage',error.message || 'ไม่สามารถโหลด Dashboard ได้'); } }finally{ setRefreshLoading(false); } }
+function on(id,event,handler){ const node=el(id); if(node) node.addEventListener(event,handler); }
 function bindFilters(){
-  document.querySelectorAll('.preset').forEach(button=>button.addEventListener('click',()=>{ document.querySelectorAll('.preset').forEach(x=>x.classList.remove('active')); button.classList.add('active'); state.days=button.dataset.days; state.pages={campaign:1,creative:1}; el('customRange').classList.toggle('hidden',state.days!=='custom'); if(state.days!=='custom') renderAll(); }));
-  ['gameFilter','accountFilter','objectiveFilter'].forEach(id=>el(id).addEventListener('change',(e)=>{ state.filters[id.replace('Filter','')]=e.target.value; state.pages={campaign:1,creative:1}; renderAll(); }));
-  el('dateFrom').addEventListener('change',(e)=>{state.customFrom=e.target.value;if(state.customTo)renderAll();}); el('dateTo').addEventListener('change',(e)=>{state.customTo=e.target.value;if(state.customFrom)renderAll();});
-  el('trendMetric').addEventListener('change',(e)=>{state.trendMetric=e.target.value;renderTrend();saveFilterState();});
-  el('resetFiltersButton').addEventListener('click',resetFilterState);
-  el('campaignPrev').addEventListener('click',()=>{state.pages.campaign--;renderCampaignTable();}); el('campaignNext').addEventListener('click',()=>{state.pages.campaign++;renderCampaignTable();});
-  el('creativePrev').addEventListener('click',()=>{state.pages.creative--;renderCreativeTable();}); el('creativeNext').addEventListener('click',()=>{state.pages.creative++;renderCreativeTable();});
-  el('refreshDashboardButton').addEventListener('click',sync);
-  el('logoutButton').addEventListener('click',()=>{clearCache();redirectLogin();});
+  document.querySelectorAll('.preset').forEach(button=>button.addEventListener('click',()=>{ document.querySelectorAll('.preset').forEach(x=>x.classList.remove('active')); button.classList.add('active'); state.days=button.dataset.days; state.pages={campaign:1,creative:1}; el('customRange')?.classList.toggle('hidden',state.days!=='custom'); if(state.days!=='custom') renderAll(); }));
+  ['gameFilter','accountFilter','objectiveFilter'].forEach(id=>on(id,'change',(e)=>{ state.filters[id.replace('Filter','')]=e.target.value; state.pages={campaign:1,creative:1}; renderAll(); }));
+  on('dateFrom','change',(e)=>{state.customFrom=e.target.value;if(state.customTo)renderAll();});
+  on('dateTo','change',(e)=>{state.customTo=e.target.value;if(state.customFrom)renderAll();});
+  on('trendMetric','change',(e)=>{state.trendMetric=e.target.value;renderTrend();saveFilterState();});
+  on('resetFiltersButton','click',resetFilterState);
+  on('campaignPrev','click',()=>{state.pages.campaign--;renderCampaignTable();});
+  on('campaignNext','click',()=>{state.pages.campaign++;renderCampaignTable();});
+  on('creativePrev','click',()=>{state.pages.creative--;renderCreativeTable();});
+  on('creativeNext','click',()=>{state.pages.creative++;renderCreativeTable();});
+  on('refreshDashboardButton','click',sync);
+  on('logoutButton','click',()=>{clearCache();redirectLogin();});
 }
-async function start(){ if(!token() || (expiry() && parseDate(expiry())<=new Date())){ clearCache(); redirectLogin(); return; } loadFilterState(); bindFilters(); document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days))); el('customRange').classList.toggle('hidden',state.days!=='custom'); el('dateFrom').value=state.customFrom; el('dateTo').value=state.customTo; el('trendMetric').value=state.trendMetric; const cache=readCache(); if(cache){ hydrate(cache.response); sync(); } else await sync(); }
+
+async function start(){
+  try {
+    if(!token() || (expiry() && parseDate(expiry())<=new Date())){ clearCache(); redirectLogin(); return; }
+    loadFilterState(); bindFilters();
+    document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days)));
+    el('customRange')?.classList.toggle('hidden',state.days!=='custom');
+    if(el('dateFrom')) el('dateFrom').value=state.customFrom;
+    if(el('dateTo')) el('dateTo').value=state.customTo;
+    if(el('trendMetric')) el('trendMetric').value=state.trendMetric;
+    const cache=readCache();
+    if(cache){ hydrate(cache.response); sync(); } else await sync();
+  } catch(error) {
+    console.error('Dashboard startup error:',error);
+    text('loadingMessage',error?.message || 'เกิดข้อผิดพลาดขณะเปิด Dashboard');
+  }
+}
 start();

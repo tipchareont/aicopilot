@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v6';
+const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v7';
 const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v1';
 const state = { response:null, rows:{account:[],campaign:[],creative:[],creativeGroup:[],aiSummary:[]}, days:7, customFrom:'', customTo:'', filters:{game:'',account:'',objective:''}, trendMetric:'spend', pages:{campaign:1,creative:1}, pageSize:10, charts:{} };
 const el = (id) => document.getElementById(id);
@@ -112,13 +112,104 @@ function renderDistribution(){ const campaign=filtered('campaign'); donut('spend
 function campaignKey(r){ return String(field(r,['Campaign_ID','Campaign_Name','Entity_Name'],'ไม่ระบุ Campaign')); }
 function creativeKey(r){ return String(field(r,['Ad_ID','Creative_ID','Ad_Name','Creative_Name','Entity_Name'],'ไม่ระบุ Creative')); }
 function groupRows(rowsToGroup,keyFn){ const map=new Map(); for(const r of rowsToGroup){ const key=keyFn(r); if(!map.has(key)) map.set(key,[]); map.get(key).push(r); } return [...map.entries()].map(([key,list])=>({key,list,totals:aggregate(list),sample:list[0]})); }
-function campaignStatus(item,medianCpr){ if(item.totals.results===0 && item.totals.spend>0) return {label:'🔴 Critical',cls:'critical'}; if(medianCpr>0 && item.totals.cpr>medianCpr*1.3) return {label:'🟡 Watch',cls:'watch'}; if(item.totals.ctr>0 && item.totals.ctr<0.7) return {label:'🟡 Watch',cls:'watch'}; return {label:'🟢 Healthy',cls:'good'}; }
+function campaignStatus(item){
+  const rows = Array.isArray(item?.list)
+    ? item.list
+    : [];
+
+  const scoredRows = rows
+    .filter((row) =>
+      field(
+        row,
+        [
+          'Intelligence_Status',
+          'Status',
+        ],
+        ''
+      )
+    )
+    .sort((a, b) =>
+      String(
+        field(
+          b,
+          [
+            'Intelligence_Data_Date',
+            'Date',
+            'Data_Date',
+          ],
+          ''
+        )
+      ).localeCompare(
+        String(
+          field(
+            a,
+            [
+              'Intelligence_Data_Date',
+              'Date',
+              'Data_Date',
+            ],
+            ''
+          )
+        )
+      )
+    );
+
+  const row =
+    scoredRows[0] ||
+    item?.sample ||
+    {};
+
+  const rawStatus = String(
+    field(
+      row,
+      [
+        'Intelligence_Status',
+        'Status',
+      ],
+      'INSUFFICIENT_DATA'
+    )
+  )
+    .trim()
+    .toUpperCase();
+
+  const map = {
+    GOOD: {
+      label: '🟢 Good',
+      cls: 'good',
+    },
+
+    NORMAL: {
+      label: '🟢 Normal',
+      cls: 'good',
+    },
+
+    WATCH: {
+      label: '🟡 Watch',
+      cls: 'watch',
+    },
+
+    CRITICAL: {
+      label: '🔴 Critical',
+      cls: 'critical',
+    },
+
+    INSUFFICIENT_DATA: {
+      label: 'ข้อมูลไม่พอ',
+      cls: '',
+    },
+  };
+
+  return (
+    map[rawStatus] ||
+    map.INSUFFICIENT_DATA
+  );
+}
 function paginate(items,type){ const totalPages=Math.max(1,Math.ceil(items.length/state.pageSize)); state.pages[type]=Math.min(Math.max(1,state.pages[type]),totalPages); const start=(state.pages[type]-1)*state.pageSize; return {items:items.slice(start,start+state.pageSize),totalPages}; }
 function renderCampaignTable(){
-  const grouped=groupRows(filtered('campaign'),campaignKey).sort((a,b)=>b.totals.spend-a.totals.spend); const cprs=grouped.map(x=>x.totals.cpr).filter(x=>x>0).sort((a,b)=>a-b); const median=cprs.length?cprs[Math.floor(cprs.length/2)]:0; text('campaignTableBadge',`${integer(grouped.length)} campaigns`);
+  const grouped=groupRows(filtered('campaign'),campaignKey).sort((a,b)=>b.totals.spend-a.totals.spend); text('campaignTableBadge',`${integer(grouped.length)} campaigns`);
   const page=paginate(grouped,'campaign'); text('campaignPageInfo',`หน้า ${state.pages.campaign} / ${page.totalPages} · ${integer(grouped.length)} รายการ`); if(el('campaignPrev')) el('campaignPrev').disabled=state.pages.campaign<=1; if(el('campaignNext')) el('campaignNext').disabled=state.pages.campaign>=page.totalPages;
   const body=el('campaignTableBody'); if(!grouped.length){ body.innerHTML='<tr><td colspan="11" class="table-empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }
-  body.innerHTML=page.items.map(item=>{ const r=item.sample; const status=campaignStatus(item,median); return `<tr><td>${escapeHtml(field(r,['Campaign_Name','Entity_Name'],item.key))}</td><td>${escapeHtml(field(r,['Game_Name','Game_ID'],'-'))}</td><td>${escapeHtml(field(r,['Account_Name','Ad_Account_Name'],'-'))}</td><td>${escapeHtml(field(r,['Objective_Display','Objective'],'-'))}</td><td>฿${money(item.totals.spend)}</td><td>${integer(item.totals.results)}</td><td>฿${money(item.totals.cpr)}</td><td>${percent(item.totals.ctr)}</td><td>${integer(item.totals.lpv)}</td><td>฿${money(item.totals.cplpv)}</td><td><span class="status-pill ${status.cls}">${status.label}</span></td></tr>`; }).join('');
+  body.innerHTML=page.items.map(item=>{ const r=item.sample; const status=campaignStatus(item); return `<tr><td>${escapeHtml(field(r,['Campaign_Name','Entity_Name'],item.key))}</td><td>${escapeHtml(field(r,['Game_Name','Game_ID'],'-'))}</td><td>${escapeHtml(field(r,['Account_Name','Ad_Account_Name'],'-'))}</td><td>${escapeHtml(field(r,['Objective_Display','Objective'],'-'))}</td><td>฿${money(item.totals.spend)}</td><td>${integer(item.totals.results)}</td><td>฿${money(item.totals.cpr)}</td><td>${percent(item.totals.ctr)}</td><td>${integer(item.totals.lpv)}</td><td>฿${money(item.totals.cplpv)}</td><td><span class="status-pill ${status.cls}">${status.label}</span></td></tr>`; }).join('');
 }
 function renderCreativeTable(){
   const grouped=groupRows(filtered('creative'),creativeKey).sort((a,b)=>b.totals.spend-a.totals.spend); text('creativeTableBadge',`${integer(grouped.length)} creatives`); const page=paginate(grouped,'creative'); text('creativePageInfo',`หน้า ${state.pages.creative} / ${page.totalPages} · ${integer(grouped.length)} รายการ`); if(el('creativePrev')) el('creativePrev').disabled=state.pages.creative<=1; if(el('creativeNext')) el('creativeNext').disabled=state.pages.creative>=page.totalPages; const body=el('creativeTableBody'); if(!grouped.length){ body.innerHTML='<tr><td colspan="9" class="table-empty">ไม่พบข้อมูลในช่วงที่เลือก</td></tr>'; return; }

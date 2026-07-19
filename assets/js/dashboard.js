@@ -161,20 +161,163 @@ function shortAiText(value,fallback='ยังไม่มีข้อมูล'
 function shortAiHtml(value,fallback='ยังไม่มีข้อมูล'){
   return escapeHtml(shortAiText(value,fallback));
 }
+
+const AI_HEALTH_NORMAL_MIN = 75;
+
+function getAiHealthState(summary){
+  const health=num(field(summary,['Overall_Health_Score'],0));
+  const status=String(field(summary,['Overall_Status'],'NORMAL')).toUpperCase();
+  const watchCount=num(field(summary,['Watch_Count'],0));
+  const criticalCount=num(field(summary,['Critical_Count'],0));
+
+  let level='good';
+  let statusLabel='สถานการณ์ปกติ';
+  let reason=`Health Score ${integer(health)}/100 ผ่านเกณฑ์ปกติ ${AI_HEALTH_NORMAL_MIN} คะแนน`;
+
+  if(status==='CRITICAL' || criticalCount>0){
+    level='high';
+    statusLabel='ต้องดำเนินการ';
+    reason=criticalCount>0
+      ? `พบ ${integer(criticalCount)} รายการ Critical และ Health Score อยู่ที่ ${integer(health)}/100`
+      : `ระบบประเมินสถานะรวมเป็น Critical และ Health Score อยู่ที่ ${integer(health)}/100`;
+  }else if(status==='WATCH' || watchCount>0 || health<AI_HEALTH_NORMAL_MIN){
+    level='medium';
+    statusLabel='ควรตรวจสอบ';
+    reason=watchCount>0
+      ? `พบ ${integer(watchCount)} รายการ Watch และเกณฑ์ปกติต้องมี Health Score อย่างน้อย ${AI_HEALTH_NORMAL_MIN}`
+      : `Health Score ${integer(health)}/100 ต่ำกว่าเกณฑ์ปกติ ${AI_HEALTH_NORMAL_MIN} คะแนน`;
+  }
+
+  return {
+    health,
+    level,
+    statusLabel,
+    reason,
+    normalThreshold:AI_HEALTH_NORMAL_MIN
+  };
+}
+
+function buildAiOverviewText(summary,healthState){
+  const spend=num(field(summary,['Total_Spend'],0));
+  const results=num(field(summary,['Total_Results'],0));
+
+  let opening='Performance โดยรวมอยู่ในสถานะปกติ';
+  if(healthState.level==='medium') opening='Performance โดยรวมอยู่ในช่วงควรตรวจสอบ';
+  if(healthState.level==='high') opening='Performance โดยรวมต้องได้รับการตรวจสอบเร่งด่วน';
+
+  const metricParts=[];
+  if(spend>0) metricParts.push(`ใช้งบ ฿${money(spend)}`);
+  if(results>0) metricParts.push(`สร้างผลลัพธ์ ${integer(results)} ครั้ง`);
+
+  return `${opening} เพราะ ${healthState.reason}${metricParts.length?` โดย${metricParts.join(' และ')}`:''}`;
+}
+
 function selectAiSummary(){
   let list=[...state.rows.aiSummary];
+
   if(state.filters.game){
     list=list.filter(row=>String(field(row,['Game_Name','Game_ID']))===state.filters.game);
   }
+
   if(state.filters.account){
     list=list.filter(row=>String(field(row,['Account_Name','Account_ID']))===state.filters.account);
   }
+
   return list.sort((a,b)=>{
     const dateCompare=String(field(b,['Summary_Date'],'')).localeCompare(String(field(a,['Summary_Date'],'')));
     if(dateCompare!==0) return dateCompare;
     return String(field(b,['Generated_At'],'')).localeCompare(String(field(a,['Generated_At'],'')));
   })[0] || null;
 }
+
+let aiPanelResizeFrame=0;
+let aiPanelResizeObserver=null;
+
+function getTrendPanel(){
+  const trendCanvas=el('trendChart');
+  return el('performanceTrendPanel')
+    || trendCanvas?.closest('[data-panel="performance-trend"]')
+    || trendCanvas?.closest('.dashboard-card')
+    || trendCanvas?.closest('.panel')
+    || trendCanvas?.parentElement?.parentElement
+    || null;
+}
+
+function getAiPanel(){
+  const actionList=el('actionList');
+  return el('aiIntelligencePanel')
+    || actionList?.closest('[data-panel="ai-intelligence"]')
+    || actionList?.closest('.dashboard-card')
+    || actionList?.closest('.panel')
+    || actionList?.parentElement?.parentElement
+    || null;
+}
+
+function applyAiPanelExactHeight(){
+  const trendPanel=getTrendPanel();
+  const aiPanel=getAiPanel();
+  const actionList=el('actionList');
+
+  if(!trendPanel || !aiPanel || !actionList) return;
+
+  const isResponsiveLayout=window.matchMedia('(max-width: 1180px)').matches;
+
+  if(isResponsiveLayout){
+    aiPanel.style.height='';
+    aiPanel.style.minHeight='';
+    aiPanel.style.maxHeight='';
+    aiPanel.style.display='';
+    aiPanel.style.flexDirection='';
+    aiPanel.style.overflow='';
+
+    actionList.style.flex='';
+    actionList.style.minHeight='';
+    actionList.style.maxHeight='';
+    actionList.style.overflowY='';
+    actionList.style.overflowX='';
+    actionList.style.paddingRight='';
+    return;
+  }
+
+  const trendHeight=Math.round(trendPanel.getBoundingClientRect().height);
+  if(trendHeight<=0) return;
+
+  aiPanel.style.height=`${trendHeight}px`;
+  aiPanel.style.minHeight=`${trendHeight}px`;
+  aiPanel.style.maxHeight=`${trendHeight}px`;
+  aiPanel.style.display='flex';
+  aiPanel.style.flexDirection='column';
+  aiPanel.style.overflow='hidden';
+
+  actionList.style.flex='1 1 auto';
+  actionList.style.minHeight='0';
+  actionList.style.maxHeight='100%';
+  actionList.style.overflowY='auto';
+  actionList.style.overflowX='hidden';
+  actionList.style.paddingRight='6px';
+}
+
+function syncAiPanelHeight(){
+  cancelAnimationFrame(aiPanelResizeFrame);
+
+  aiPanelResizeFrame=requestAnimationFrame(()=>{
+    applyAiPanelExactHeight();
+
+    window.setTimeout(applyAiPanelExactHeight,80);
+    window.setTimeout(applyAiPanelExactHeight,300);
+
+    const trendPanel=getTrendPanel();
+
+    if(trendPanel && !aiPanelResizeObserver && 'ResizeObserver' in window){
+      aiPanelResizeObserver=new ResizeObserver(()=>{
+        applyAiPanelExactHeight();
+      });
+
+      aiPanelResizeObserver.observe(trendPanel);
+    }
+  });
+}
+
 function renderActions(){
   const container=el('actionList');
   if(!container) return;
@@ -184,32 +327,81 @@ function renderActions(){
 
   if(!summary){
     if(badge) badge.textContent='ยังไม่มี AI Summary';
+
     container.className='ai-placeholder';
     container.innerHTML='<div><strong>ยังไม่มีข้อมูลวิเคราะห์จาก AI</strong><p>รอ AI Intelligence Builder สร้างข้อมูล หรือไม่มีข้อมูลตรงกับ Game และ Account ที่เลือก</p></div>';
+
+    syncAiPanelHeight();
     return;
   }
 
-  const health=num(field(summary,['Overall_Health_Score'],0));
-  const status=String(field(summary,['Overall_Status'],'NORMAL')).toUpperCase();
+  const healthState=getAiHealthState(summary);
   const summaryDate=field(summary,['Summary_Date'],'-');
   const game=field(summary,['Game_Name','Game_ID'],'-');
   const account=field(summary,['Account_Name','Account_ID'],'-');
-  const level=status==='CRITICAL'?'high':(status==='WATCH'||health<75?'medium':'good');
-  const statusLabel=level==='high'?'ต้องดำเนินการ':level==='medium'?'ควรตรวจสอบ':'สถานการณ์ปกติ';
+  const overviewText=buildAiOverviewText(summary,healthState);
 
   if(badge) badge.textContent=`AI · ${summaryDate}`;
+
   container.className='action-list ai-compact-list';
   container.innerHTML=[
-    `<div class="ai-compact-meta"><span>${escapeHtml(game)}</span><span>${escapeHtml(account)}</span><strong>Health ${integer(health)}/100</strong></div>`,
-    `<article class="action-card ai-compact-card" data-level="${level}"><div class="action-head"><strong>ภาพรวม</strong><span class="action-tag">${statusLabel}</span></div><p>${shortAiHtml(field(summary,['Executive_Summary'],''))}</p></article>`,
-    `<article class="action-card ai-compact-card" data-level="good"><div class="action-head"><strong>โอกาสสำคัญ</strong><span class="action-tag">โอกาส</span></div><p>${shortAiHtml(field(summary,['Biggest_Opportunity'],''),'ยังไม่พบโอกาสที่ชัดเจน')}</p></article>`,
-    `<article class="action-card ai-compact-card" data-level="${level}"><div class="action-head"><strong>ความเสี่ยงสำคัญ</strong><span class="action-tag">ความเสี่ยง</span></div><p>${shortAiHtml(field(summary,['Biggest_Risk'],''),'ไม่พบความเสี่ยงสำคัญ')}</p></article>`,
-    `<article class="action-card ai-compact-card" data-level="${level}"><div class="action-head"><strong>สิ่งที่ควรทำ</strong><span class="action-tag">ทำก่อน</span></div><p>${shortAiHtml(field(summary,['Recommended_Action'],''),'ติดตาม Performance ตามรอบปกติ')}</p></article>`,
-  ].join('');
-}
-function renderAll(){ state.pages.campaign=Math.max(1,state.pages.campaign); state.pages.creative=Math.max(1,state.pages.creative); renderKpis(); renderTrend(); renderDistribution(); renderActions(); renderCampaignTable(); renderCreativeTable(); saveFilterState(); }
+    `<div class="ai-compact-meta"><span>${escapeHtml(game)}</span><span>${escapeHtml(account)}</span><strong>Health ${integer(healthState.health)}/100</strong></div>`,
 
-async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.3.0] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.3.0] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
+    `<article class="action-card ai-compact-card" data-level="${healthState.level}">
+      <div class="action-head">
+        <strong>ภาพรวม</strong>
+        <span class="action-tag">${healthState.statusLabel}</span>
+      </div>
+      <div class="ai-threshold-note">
+        <strong>เกณฑ์ปกติ:</strong> Health Score ≥ ${healthState.normalThreshold} · ปัจจุบัน ${integer(healthState.health)}
+      </div>
+      <p>${escapeHtml(overviewText)}</p>
+    </article>`,
+
+    `<article class="action-card ai-compact-card" data-level="good">
+      <div class="action-head">
+        <strong>โอกาสสำคัญ</strong>
+        <span class="action-tag">โอกาส</span>
+      </div>
+      <p>${shortAiHtml(field(summary,['Biggest_Opportunity'],''),'ยังไม่พบโอกาสที่ชัดเจน')}</p>
+    </article>`,
+
+    `<article class="action-card ai-compact-card" data-level="${healthState.level}">
+      <div class="action-head">
+        <strong>ความเสี่ยงสำคัญ</strong>
+        <span class="action-tag">ความเสี่ยง</span>
+      </div>
+      <p>${shortAiHtml(field(summary,['Biggest_Risk'],''),'ไม่พบความเสี่ยงสำคัญ')}</p>
+    </article>`,
+
+    `<article class="action-card ai-compact-card" data-level="${healthState.level}">
+      <div class="action-head">
+        <strong>สิ่งที่ควรทำ</strong>
+        <span class="action-tag">ทำก่อน</span>
+      </div>
+      <p>${shortAiHtml(field(summary,['Recommended_Action'],''),'ติดตาม Performance ตามรอบปกติ')}</p>
+    </article>`
+  ].join('');
+
+  syncAiPanelHeight();
+}
+
+function renderAll(){
+  state.pages.campaign=Math.max(1,state.pages.campaign);
+  state.pages.creative=Math.max(1,state.pages.creative);
+
+  renderKpis();
+  renderTrend();
+  renderDistribution();
+  renderActions();
+  renderCampaignTable();
+  renderCreativeTable();
+  saveFilterState();
+
+  syncAiPanelHeight();
+}
+
+async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.3.2] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.3.2] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
 function saveCache(response){ localStorage.setItem(cacheKey(),JSON.stringify({saved_at:new Date().toISOString(),response})); }
 function readCache(){ try{ const value=JSON.parse(localStorage.getItem(cacheKey())||'null'); return value?.response?.dashboard?value:null; }catch{return null;} }
 function clearCache(){ Object.keys(localStorage).filter(k=>k.startsWith('ai_marketing_copilot_dashboard_cache_')).forEach(k=>localStorage.removeItem(k)); }
@@ -234,7 +426,7 @@ function bindFilters(){
 async function start(){
   try {
     if(!token()){ clearCache(); redirectLogin(); return; }
-    console.info('[AI Marketing Copilot v4.3.0] Session token found. Calling Dashboard API.');
+    console.info('[AI Marketing Copilot v4.3.2] Session token found. Calling Dashboard API.');
     loadFilterState(); bindFilters();
     document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days)));
     el('customRange')?.classList.toggle('hidden',state.days!=='custom');
@@ -248,4 +440,11 @@ async function start(){
     text('loadingMessage',error?.message || 'เกิดข้อผิดพลาดขณะเปิด Dashboard');
   }
 }
+
+window.addEventListener('resize',syncAiPanelHeight);
+
+if(document.fonts?.ready){
+  document.fonts.ready.then(syncAiPanelHeight).catch(()=>{});
+}
+
 start();

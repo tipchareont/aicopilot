@@ -130,7 +130,8 @@ function cleanAiText(value){
     .replace(/\r/g,'\n')
     .trim();
 }
-function shortAiText(value,fallback='ยังไม่มีข้อมูล',maxLength=190){
+
+function shortAiText(value,fallback='ยังไม่มีข้อมูล'){
   const raw=cleanAiText(value);
   if(!raw) return fallback;
 
@@ -139,6 +140,7 @@ function shortAiText(value,fallback='ยังไม่มีข้อมูล'
 
   if(!result){
     const ignoredHeading=/^(ประเด็นสำคัญ|รายละเอียด|เหตุผล|สิ่งที่ควรทำ|สัญญาณที่พบ|ผลกระทบ|ลำดับความสำคัญ|รายการที่ต้องทำ)\s*:/i;
+
     result=raw
       .split('\n')
       .map(line=>line.trim())
@@ -147,69 +149,86 @@ function shortAiText(value,fallback='ยังไม่มีข้อมูล'
       .find(line=>line && !ignoredHeading.test(line)) || fallback;
   }
 
-  result=result
+  return result
     .replace(/^สรุปสั้น\s*:\s*/i,'')
     .replace(/\s+/g,' ')
-    .trim();
-
-  if(result.length>maxLength){
-    return `${result.slice(0,maxLength-3).trim()}...`;
-  }
-
-  return result || fallback;
-}
-function shortAiHtml(value,fallback='ยังไม่มีข้อมูล'){
-  return escapeHtml(shortAiText(value,fallback));
+    .trim() || fallback;
 }
 
-const AI_HEALTH_NORMAL_MIN = 75;
+function getAiStatusState(summary){
+  const status=String(
+    field(summary,['Overall_Status'],'INSUFFICIENT_DATA')
+  ).trim().toUpperCase();
 
-function getAiHealthState(summary){
   const health=num(field(summary,['Overall_Health_Score'],0));
-  const status=String(field(summary,['Overall_Status'],'NORMAL')).toUpperCase();
-  const watchCount=num(field(summary,['Watch_Count'],0));
-  const criticalCount=num(field(summary,['Critical_Count'],0));
 
-  let level='good';
-  let statusLabel='สถานการณ์ปกติ';
-  let reason=`Health Score ${integer(health)}/100 ผ่านเกณฑ์ปกติ ${AI_HEALTH_NORMAL_MIN} คะแนน`;
-
-  if(status==='CRITICAL' || criticalCount>0){
-    level='high';
-    statusLabel='ต้องดำเนินการ';
-    reason=criticalCount>0
-      ? `พบ ${integer(criticalCount)} รายการ Critical และ Health Score อยู่ที่ ${integer(health)}/100`
-      : `ระบบประเมินสถานะรวมเป็น Critical และ Health Score อยู่ที่ ${integer(health)}/100`;
-  }else if(status==='WATCH' || watchCount>0 || health<AI_HEALTH_NORMAL_MIN){
-    level='medium';
-    statusLabel='ควรตรวจสอบ';
-    reason=watchCount>0
-      ? `พบ ${integer(watchCount)} รายการ Watch และเกณฑ์ปกติต้องมี Health Score อย่างน้อย ${AI_HEALTH_NORMAL_MIN}`
-      : `Health Score ${integer(health)}/100 ต่ำกว่าเกณฑ์ปกติ ${AI_HEALTH_NORMAL_MIN} คะแนน`;
-  }
+  const statusMap={
+    CRITICAL:{
+      level:'high',
+      statusLabel:'ต้องดำเนินการ'
+    },
+    WATCH:{
+      level:'medium',
+      statusLabel:'ควรตรวจสอบ'
+    },
+    GOOD:{
+      level:'good',
+      statusLabel:'สถานการณ์ดี'
+    },
+    NORMAL:{
+      level:'good',
+      statusLabel:'สถานการณ์ปกติ'
+    },
+    INSUFFICIENT_DATA:{
+      level:'insufficient',
+      statusLabel:'ข้อมูลยังไม่เพียงพอ'
+    }
+  };
 
   return {
+    status,
     health,
-    level,
-    statusLabel,
-    reason,
-    normalThreshold:AI_HEALTH_NORMAL_MIN
+    ...(statusMap[status] || statusMap.INSUFFICIENT_DATA)
   };
 }
 
-function buildAiOverviewText(summary,healthState){
-  const spend=num(field(summary,['Total_Spend'],0));
-  const results=num(field(summary,['Total_Results'],0));
+function buildAiCard({title,tag,level,value,fallback}){
+  const content=shortAiText(value,fallback);
+  const showToggle=content.length>120;
 
-  let opening='Performance โดยรวมอยู่ในสถานะปกติ';
-  if(healthState.level==='medium') opening='Performance โดยรวมอยู่ในช่วงควรตรวจสอบ';
-  if(healthState.level==='high') opening='Performance โดยรวมต้องได้รับการตรวจสอบเร่งด่วน';
+  return `
+    <article class="action-card ai-compact-card" data-level="${level}">
+      <div class="action-head">
+        <strong>${escapeHtml(title)}</strong>
+        <span class="action-tag">${escapeHtml(tag)}</span>
+      </div>
 
-  const metricParts=[];
-  if(spend>0) metricParts.push(`ใช้งบ ฿${money(spend)}`);
-  if(results>0) metricParts.push(`สร้างผลลัพธ์ ${integer(results)} ครั้ง`);
+      <p class="ai-card-text">${escapeHtml(content)}</p>
 
-  return `${opening} เพราะ ${healthState.reason}${metricParts.length?` โดย${metricParts.join(' และ')}`:''}`;
+      ${showToggle ? `
+        <button
+          type="button"
+          class="ai-card-toggle"
+          aria-expanded="false"
+        >อ่านทั้งหมด</button>
+      ` : ''}
+    </article>
+  `;
+}
+
+function bindAiCardToggles(container){
+  container.querySelectorAll('.ai-card-toggle').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const card=button.closest('.ai-compact-card');
+      if(!card) return;
+
+      const expanded=card.classList.toggle('is-expanded');
+      button.textContent=expanded ? 'ย่อข้อความ' : 'อ่านทั้งหมด';
+      button.setAttribute('aria-expanded',String(expanded));
+
+      applyAiPanelExactHeight();
+    });
+  });
 }
 
 function selectAiSummary(){
@@ -335,54 +354,55 @@ function renderActions(){
     return;
   }
 
-  const healthState=getAiHealthState(summary);
+  const statusState=getAiStatusState(summary);
   const summaryDate=field(summary,['Summary_Date'],'-');
   const game=field(summary,['Game_Name','Game_ID'],'-');
   const account=field(summary,['Account_Name','Account_ID'],'-');
-  const overviewText=buildAiOverviewText(summary,healthState);
 
   if(badge) badge.textContent=`AI · ${summaryDate}`;
 
   container.className='action-list ai-compact-list';
   container.innerHTML=[
-    `<div class="ai-compact-meta"><span>${escapeHtml(game)}</span><span>${escapeHtml(account)}</span><strong>Health ${integer(healthState.health)}/100</strong></div>`,
+    `<div class="ai-compact-meta">
+      <span>${escapeHtml(game)}</span>
+      <span>${escapeHtml(account)}</span>
+      <strong>Health ${integer(statusState.health)}/100</strong>
+    </div>`,
 
-    `<article class="action-card ai-compact-card" data-level="${healthState.level}">
-      <div class="action-head">
-        <strong>ภาพรวม</strong>
-        <span class="action-tag">${healthState.statusLabel}</span>
-      </div>
-      <div class="ai-threshold-note">
-        <strong>เกณฑ์ปกติ:</strong> Health Score ≥ ${healthState.normalThreshold} · ปัจจุบัน ${integer(healthState.health)}
-      </div>
-      <p>${escapeHtml(overviewText)}</p>
-    </article>`,
+    buildAiCard({
+      title:'ภาพรวม',
+      tag:statusState.statusLabel,
+      level:statusState.level,
+      value:field(summary,['Executive_Summary'],''),
+      fallback:'ยังไม่มีข้อมูลสรุปภาพรวม'
+    }),
 
-    `<article class="action-card ai-compact-card" data-level="good">
-      <div class="action-head">
-        <strong>โอกาสสำคัญ</strong>
-        <span class="action-tag">โอกาส</span>
-      </div>
-      <p>${shortAiHtml(field(summary,['Biggest_Opportunity'],''),'ยังไม่พบโอกาสที่ชัดเจน')}</p>
-    </article>`,
+    buildAiCard({
+      title:'โอกาสสำคัญ',
+      tag:'โอกาส',
+      level:'good',
+      value:field(summary,['Biggest_Opportunity'],''),
+      fallback:'ยังไม่พบโอกาสที่ชัดเจน'
+    }),
 
-    `<article class="action-card ai-compact-card" data-level="${healthState.level}">
-      <div class="action-head">
-        <strong>ความเสี่ยงสำคัญ</strong>
-        <span class="action-tag">ความเสี่ยง</span>
-      </div>
-      <p>${shortAiHtml(field(summary,['Biggest_Risk'],''),'ไม่พบความเสี่ยงสำคัญ')}</p>
-    </article>`,
+    buildAiCard({
+      title:'ความเสี่ยงสำคัญ',
+      tag:'ความเสี่ยง',
+      level:statusState.level,
+      value:field(summary,['Biggest_Risk'],''),
+      fallback:'ไม่พบความเสี่ยงสำคัญ'
+    }),
 
-    `<article class="action-card ai-compact-card" data-level="${healthState.level}">
-      <div class="action-head">
-        <strong>สิ่งที่ควรทำ</strong>
-        <span class="action-tag">ทำก่อน</span>
-      </div>
-      <p>${shortAiHtml(field(summary,['Recommended_Action'],''),'ติดตาม Performance ตามรอบปกติ')}</p>
-    </article>`
+    buildAiCard({
+      title:'สิ่งที่ควรทำ',
+      tag:'ทำก่อน',
+      level:statusState.level,
+      value:field(summary,['Recommended_Action'],''),
+      fallback:'ติดตาม Performance ตามรอบปกติ'
+    })
   ].join('');
 
+  bindAiCardToggles(container);
   syncAiPanelHeight();
 }
 
@@ -401,7 +421,7 @@ function renderAll(){
   syncAiPanelHeight();
 }
 
-async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.3.2] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.3.2] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
+async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.3.3] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.3.3] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
 function saveCache(response){ localStorage.setItem(cacheKey(),JSON.stringify({saved_at:new Date().toISOString(),response})); }
 function readCache(){ try{ const value=JSON.parse(localStorage.getItem(cacheKey())||'null'); return value?.response?.dashboard?value:null; }catch{return null;} }
 function clearCache(){ Object.keys(localStorage).filter(k=>k.startsWith('ai_marketing_copilot_dashboard_cache_')).forEach(k=>localStorage.removeItem(k)); }
@@ -426,7 +446,7 @@ function bindFilters(){
 async function start(){
   try {
     if(!token()){ clearCache(); redirectLogin(); return; }
-    console.info('[AI Marketing Copilot v4.3.2] Session token found. Calling Dashboard API.');
+    console.info('[AI Marketing Copilot v4.3.3] Session token found. Calling Dashboard API.');
     loadFilterState(); bindFilters();
     document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days)));
     el('customRange')?.classList.toggle('hidden',state.days!=='custom');

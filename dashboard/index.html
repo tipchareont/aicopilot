@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | AI Marketing Copilot</title>
   <meta name="description" content="AI Marketing Copilot Dashboard สำหรับตรวจสอบและตัดสินใจจากข้อมูล Meta Ads">
-  <link rel="stylesheet" href="../assets/css/app.css?v=4.3.2">
+  <link rel="stylesheet" href="../assets/css/app.css?v=4.3.3">
   <style>
     :root{--bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;--primary:#2563eb;--primary-soft:#eff6ff;--success:#15803d;--success-soft:#f0fdf4;--warning:#b45309;--warning-soft:#fffbeb;--danger:#b91c1c;--danger-soft:#fef2f2;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px}
     *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}.hidden{display:none!important}
@@ -22,6 +22,46 @@
     .table-wrap{overflow:auto;max-height:430px}.data-table{width:100%;min-width:1050px;border-collapse:collapse;font-size:13px}.data-table th,.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}.data-table th{position:sticky;top:0;z-index:1;background:#f8fafc;color:#475569}.data-table tbody tr:hover{background:#f8fbff}.table-empty{padding:32px 20px!important;color:var(--muted);text-align:center!important}.status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#f1f5f9;color:#475569}.status-pill.good{background:var(--success-soft);color:var(--success)}.status-pill.watch{background:var(--warning-soft);color:var(--warning)}.status-pill.critical{background:var(--danger-soft);color:var(--danger)}.table-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}.pager{display:flex;gap:8px}.pager button{border:1px solid var(--border);background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}.pager button:disabled{opacity:.45;cursor:not-allowed}.creative-cell{display:flex;align-items:center;gap:10px}.thumb{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#dbeafe,#e2e8f0);display:grid;place-items:center;font-size:10px;color:#64748b;flex:none}.footer-note{padding:2px 4px 24px;color:var(--muted);font-size:12px;text-align:center}
     @media(max-width:1180px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-grid,.chart-grid{grid-template-columns:1fr}.filters{grid-template-columns:repeat(2,1fr)}.ai-panel-fixed{height:auto!important;max-height:none}.ai-panel-fixed>.panel-body{overflow:visible;padding-right:20px}}
     @media(max-width:760px){.filters,.kpi-grid,.ai-summary-meta{grid-template-columns:1fr}.filter-top,.topbar,.topbar-actions,.user-box{align-items:flex-start;flex-direction:column}.last-updated,.user-meta{text-align:left}.content{padding:16px}.chart-box{height:290px}}
+
+    /* AI Daily Intelligence v4.3.3 */
+    .action-card[data-level="insufficient"]{border-color:#cbd5e1;background:#f8fafc}
+    .ai-threshold-note{display:none!important}
+    .ai-compact-card .ai-card-text{
+      margin:7px 0 0;
+      color:#475569;
+      font-size:12px;
+      line-height:1.65;
+      overflow-wrap:anywhere;
+      display:-webkit-box;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:3;
+      overflow:hidden;
+    }
+    .ai-compact-card.is-expanded .ai-card-text{
+      display:block;
+      overflow:visible;
+      -webkit-line-clamp:unset;
+    }
+    .ai-card-toggle{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      margin-top:8px;
+      padding:0;
+      border:0;
+      background:transparent;
+      color:var(--primary);
+      font:inherit;
+      font-size:11px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .ai-card-toggle:hover{text-decoration:underline}
+    .ai-card-toggle:focus-visible{
+      outline:2px solid rgba(37,99,235,.35);
+      outline-offset:3px;
+      border-radius:4px;
+    }
   </style>
 </head>
 <body>
@@ -75,13 +115,13 @@
 
         <article class="panel"><div class="panel-header"><div><h3>Campaign Summary</h3><p>เรียงตาม Spend พร้อม Metric สำคัญสำหรับตรวจสอบ</p></div><span id="campaignTableBadge" class="panel-badge">0 campaigns</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Campaign</th><th>Game</th><th>Account</th><th>Objective</th><th>Spend</th><th>Results</th><th>Cost / Result</th><th>CTR</th><th>LPV</th><th>Cost / LPV</th><th>Status</th></tr></thead><tbody id="campaignTableBody"><tr><td colspan="11" class="table-empty">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="campaignPageInfo">Top 10</span><div class="pager"><button id="campaignPrev">ก่อนหน้า</button><button id="campaignNext">ถัดไป</button></div></div></article>
         <article class="panel"><div class="panel-header"><div><h3>Creative Summary</h3><p>Creative ที่มี Spend สูงสุดในช่วงเวลาที่เลือก</p></div><span id="creativeTableBadge" class="panel-badge">0 creatives</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Creative Group</th><th>Ad / Creative</th><th>Campaign</th><th>Objective</th><th>Spend</th><th>Results</th><th>Cost / Result</th><th>CTR</th><th>Frequency</th></tr></thead><tbody id="creativeTableBody"><tr><td colspan="9" class="table-empty">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="creativePageInfo">Top 10</span><div class="pager"><button id="creativePrev">ก่อนหน้า</button><button id="creativeNext">ถัดไป</button></div></div></article>
-        <footer class="footer-note">AI Marketing Copilot · Frontend v4.3.2 · Google Sheets Single Source of Truth</footer>
+        <footer class="footer-note">AI Marketing Copilot · Frontend v4.3.3 · Google Sheets Single Source of Truth</footer>
       </main>
     </section>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script src="../assets/js/config.js?v=4.3.2"></script>
-  <script src="../assets/js/auth.js?v=4.3.2"></script>
-  <script src="../assets/js/dashboard.js?v=4.3.2"></script>
+  <script src="../assets/js/config.js?v=4.3.3"></script>
+  <script src="../assets/js/auth.js?v=4.3.3"></script>
+  <script src="../assets/js/dashboard.js?v=4.3.3"></script>
 </body>
 </html>

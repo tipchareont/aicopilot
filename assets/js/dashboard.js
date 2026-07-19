@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v4';
+const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v6';
 const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v1';
 const state = { response:null, rows:{account:[],campaign:[],creative:[],creativeGroup:[],aiSummary:[]}, days:7, customFrom:'', customTo:'', filters:{game:'',account:'',objective:''}, trendMetric:'spend', pages:{campaign:1,creative:1}, pageSize:10, charts:{} };
 const el = (id) => document.getElementById(id);
@@ -127,16 +127,39 @@ function renderCreativeTable(){
 function cleanAiText(value){
   return String(value ?? '')
     .replace(/\r\n/g,'\n')
-    .replace(/^สรุปสั้น\s*:\s*/i,'')
+    .replace(/\r/g,'\n')
     .trim();
 }
-function aiTextHtml(value,fallback='ยังไม่มีข้อมูล'){
-  const textValue=cleanAiText(value) || fallback;
-  return escapeHtml(textValue)
-    .replace(/\n{3,}/g,'\n\n')
-    .replace(/^(ประเด็นสำคัญ|รายละเอียด|เหตุผล|สิ่งที่ควรทำ|สัญญาณที่พบ|ผลกระทบ|ลำดับความสำคัญ|รายการที่ต้องทำ)\s*:\s*/gim,'<strong>$1</strong><br>')
-    .replace(/^[•●▪■☐□-]\s*/gim,'• ')
-    .replace(/\n/g,'<br>');
+function shortAiText(value,fallback='ยังไม่มีข้อมูล',maxLength=190){
+  const raw=cleanAiText(value);
+  if(!raw) return fallback;
+
+  const shortMatch=raw.match(/(?:^|\n)\s*สรุปสั้น\s*:\s*([^\n]+)/i);
+  let result=shortMatch?.[1]?.trim() || '';
+
+  if(!result){
+    const ignoredHeading=/^(ประเด็นสำคัญ|รายละเอียด|เหตุผล|สิ่งที่ควรทำ|สัญญาณที่พบ|ผลกระทบ|ลำดับความสำคัญ|รายการที่ต้องทำ)\s*:/i;
+    result=raw
+      .split('\n')
+      .map(line=>line.trim())
+      .filter(Boolean)
+      .map(line=>line.replace(/^[•●▪■☐□\-–—🔹]+\s*/,'').trim())
+      .find(line=>line && !ignoredHeading.test(line)) || fallback;
+  }
+
+  result=result
+    .replace(/^สรุปสั้น\s*:\s*/i,'')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  if(result.length>maxLength){
+    return `${result.slice(0,maxLength-3).trim()}...`;
+  }
+
+  return result || fallback;
+}
+function shortAiHtml(value,fallback='ยังไม่มีข้อมูล'){
+  return escapeHtml(shortAiText(value,fallback));
 }
 function selectAiSummary(){
   let list=[...state.rows.aiSummary];
@@ -175,18 +198,18 @@ function renderActions(){
   const statusLabel=level==='high'?'ต้องดำเนินการ':level==='medium'?'ควรตรวจสอบ':'สถานการณ์ปกติ';
 
   if(badge) badge.textContent=`AI · ${summaryDate}`;
-  container.className='action-list';
+  container.className='action-list ai-compact-list';
   container.innerHTML=[
-    `<div class="ai-summary-meta"><div><span>เกม</span><strong>${escapeHtml(game)}</strong></div><div><span>บัญชี</span><strong>${escapeHtml(account)}</strong></div><div><span>Health Score</span><strong>${integer(health)} / 100</strong></div></div>`,
-    `<article class="action-card" data-level="${level}"><div class="action-head"><strong>ภาพรวม</strong><span class="action-tag">${statusLabel}</span></div><p>${aiTextHtml(field(summary,['Executive_Summary'],''))}</p></article>`,
-    `<article class="action-card" data-level="good"><div class="action-head"><strong>โอกาสสำคัญ</strong><span class="action-tag">Opportunity</span></div><p>${aiTextHtml(field(summary,['Biggest_Opportunity'],''))}</p></article>`,
-    `<article class="action-card" data-level="${level}"><div class="action-head"><strong>ความเสี่ยงสำคัญ</strong><span class="action-tag">Risk</span></div><p>${aiTextHtml(field(summary,['Biggest_Risk'],''),'ไม่พบความเสี่ยงสำคัญ')}</p></article>`,
-    `<article class="action-card" data-level="${level}"><div class="action-head"><strong>สิ่งที่ควรทำ</strong><span class="action-tag">Action</span></div><p>${aiTextHtml(field(summary,['Recommended_Action'],''),'ติดตาม Performance ตามรอบปกติ')}</p></article>`,
+    `<div class="ai-compact-meta"><span>${escapeHtml(game)}</span><span>${escapeHtml(account)}</span><strong>Health ${integer(health)}/100</strong></div>`,
+    `<article class="action-card ai-compact-card" data-level="${level}"><div class="action-head"><strong>ภาพรวม</strong><span class="action-tag">${statusLabel}</span></div><p>${shortAiHtml(field(summary,['Executive_Summary'],''))}</p></article>`,
+    `<article class="action-card ai-compact-card" data-level="good"><div class="action-head"><strong>โอกาสสำคัญ</strong><span class="action-tag">โอกาส</span></div><p>${shortAiHtml(field(summary,['Biggest_Opportunity'],''),'ยังไม่พบโอกาสที่ชัดเจน')}</p></article>`,
+    `<article class="action-card ai-compact-card" data-level="${level}"><div class="action-head"><strong>ความเสี่ยงสำคัญ</strong><span class="action-tag">ความเสี่ยง</span></div><p>${shortAiHtml(field(summary,['Biggest_Risk'],''),'ไม่พบความเสี่ยงสำคัญ')}</p></article>`,
+    `<article class="action-card ai-compact-card" data-level="${level}"><div class="action-head"><strong>สิ่งที่ควรทำ</strong><span class="action-tag">ทำก่อน</span></div><p>${shortAiHtml(field(summary,['Recommended_Action'],''),'ติดตาม Performance ตามรอบปกติ')}</p></article>`,
   ].join('');
 }
 function renderAll(){ state.pages.campaign=Math.max(1,state.pages.campaign); state.pages.creative=Math.max(1,state.pages.creative); renderKpis(); renderTrend(); renderDistribution(); renderActions(); renderCampaignTable(); renderCreativeTable(); saveFilterState(); }
 
-async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
+async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.3.0] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.3.0] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
 function saveCache(response){ localStorage.setItem(cacheKey(),JSON.stringify({saved_at:new Date().toISOString(),response})); }
 function readCache(){ try{ const value=JSON.parse(localStorage.getItem(cacheKey())||'null'); return value?.response?.dashboard?value:null; }catch{return null;} }
 function clearCache(){ Object.keys(localStorage).filter(k=>k.startsWith('ai_marketing_copilot_dashboard_cache_')).forEach(k=>localStorage.removeItem(k)); }
@@ -210,7 +233,8 @@ function bindFilters(){
 
 async function start(){
   try {
-    if(!token() || window.Auth?.isExpired?.()){ clearCache(); redirectLogin(); return; }
+    if(!token()){ clearCache(); redirectLogin(); return; }
+    console.info('[AI Marketing Copilot v4.3.0] Session token found. Calling Dashboard API.');
     loadFilterState(); bindFilters();
     document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days)));
     el('customRange')?.classList.toggle('hidden',state.days!=='custom');

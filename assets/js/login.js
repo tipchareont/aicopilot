@@ -46,8 +46,8 @@ async function readJsonResponse(response) {
   }
 }
 
-// ถ้ามี Session ที่ยังไม่หมดอายุ ให้เข้า Dashboard ได้ทันที
-if (window.Auth?.hasUsableSession?.()) {
+// หากมี Token ให้ Dashboard API เป็นผู้ตรวจ Session จริง
+if (window.Auth?.token?.()) {
   location.replace('dashboard/index.html');
 }
 
@@ -89,6 +89,11 @@ form.addEventListener('submit', async (event) => {
 
     window.Auth.clearDashboardCache();
     window.Auth.save(result);
+
+    console.info('[AI Marketing Copilot v4.2.0] Login saved session', {
+      hasToken: Boolean(window.Auth.token()),
+      expiresAt: window.Auth.expiry?.() || '',
+    });
 
     if (!window.Auth.token()) {
       throw new Error('ระบบไม่สามารถบันทึก Session ได้');

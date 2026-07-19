@@ -1,28 +1,112 @@
-const form=document.getElementById('loginForm');
-const button=document.getElementById('loginButton');
-const message=document.getElementById('loginMessage');
+'use strict';
 
-function show(text,type=''){message.textContent=text;message.className=`message ${type}`.trim()}
+const form = document.getElementById('loginForm');
+const button = document.getElementById('loginButton');
+const message = document.getElementById('loginMessage');
 
-form.addEventListener('submit',async(e)=>{
-  e.preventDefault();
-  const username=document.getElementById('username').value.trim();
-  const password=document.getElementById('password').value;
-  const url=window.APP_CONFIG.LOGIN_URL;
+function show(text, type = '') {
+  message.textContent = text;
+  message.className = `message ${type}`.trim();
+}
 
-  if(!username||!password){show('กรุณากรอก Username และ Password','error');return}
-  if(!url||url.includes('PASTE_N8N')){show('กรุณาใส่ Login Production URL ใน config.js','error');return}
+function normalizeApiResult(value) {
+  let result = value;
 
-  button.disabled=true;button.textContent='กำลังเข้าสู่ระบบ...';show('');
+  if (Array.isArray(result)) result = result[0];
 
-  try{
-    const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
-    const text=await response.text();
-    const result=JSON.parse(text);
-    if(!response.ok||!result.success)throw new Error(result.message||'Login ไม่สำเร็จ');
+  if (
+    result &&
+    typeof result === 'object' &&
+    Object.keys(result).length === 1 &&
+    typeof result.body === 'string'
+  ) {
+    try {
+      result = JSON.parse(result.body);
+    } catch {}
+  }
+
+  if (typeof result === 'string') {
+    result = JSON.parse(result);
+  }
+
+  return result;
+}
+
+async function readJsonResponse(response) {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    throw new Error('Login API ไม่ได้ส่งข้อมูลกลับมา');
+  }
+
+  try {
+    return normalizeApiResult(JSON.parse(raw));
+  } catch {
+    throw new Error('Login API ส่งข้อมูลที่อ่านไม่ได้');
+  }
+}
+
+// ถ้ามี Session ที่ยังไม่หมดอายุ ให้เข้า Dashboard ได้ทันที
+if (window.Auth?.hasUsableSession?.()) {
+  location.replace('dashboard/index.html');
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const url = window.APP_CONFIG?.LOGIN_URL;
+
+  if (!username || !password) {
+    show('กรุณากรอก Username และ Password', 'error');
+    return;
+  }
+
+  if (!url || url.includes('PASTE_N8N')) {
+    show('กรุณาใส่ Login Production URL ใน config.js', 'error');
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'กำลังเข้าสู่ระบบ...';
+  show('');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const result = await readJsonResponse(response);
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.message || 'Login ไม่สำเร็จ');
+    }
+
+    window.Auth.clearDashboardCache();
     window.Auth.save(result);
-    show(`เข้าสู่ระบบสำเร็จ: ${result.user.display_name}`,'success');
-    setTimeout(()=>location.href='dashboard/index.html',300);
-  }catch(error){show(error.message||'เชื่อมต่อระบบไม่ได้','error')}
-  finally{button.disabled=false;button.textContent='เข้าสู่ระบบ'}
+
+    if (!window.Auth.token()) {
+      throw new Error('ระบบไม่สามารถบันทึก Session ได้');
+    }
+
+    show(
+      `เข้าสู่ระบบสำเร็จ: ${
+        result?.user?.display_name || result?.user?.username || username
+      }`,
+      'success'
+    );
+
+    location.replace('dashboard/index.html');
+  } catch (error) {
+    console.error('Login error:', error);
+    show(error?.message || 'เชื่อมต่อระบบไม่ได้', 'error');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'เข้าสู่ระบบ';
+  }
 });

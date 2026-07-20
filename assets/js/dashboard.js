@@ -1,6 +1,8 @@
 'use strict';
 
-const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v8';
+const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v9';
+const MAX_PERSISTENT_CACHE_CHARS = 1000000;
+let memoryCache = null;
 const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v2';
 const state = { response:null, rows:{account:[],campaign:[],creative:[],creativeGroup:[],aiSummary:[]}, days:'all', customFrom:'', customTo:'', filters:{game:'',account:'',objective:''}, trendMetric:'spend', pages:{campaign:1,creative:1}, pageSize:10, charts:{} };
 const el = (id) => document.getElementById(id);
@@ -9,7 +11,7 @@ const escapeHtml = (value) => String(value ?? '').replaceAll('&','&amp;').replac
 const firstStored = (keys) => { for(const key of keys){ const value=localStorage.getItem(key); if(value) return value; } return ''; };
 const token = () => window.Auth?.token?.() || firstStored(['session_token','token','auth_token']);
 const sessionId = () => firstStored(['session_id','Session_ID','sessionId']);
-const cacheKey = () => `${CACHE_PREFIX}:${sessionId() || firstStored(['username','Username']) || 'anonymous'}`;
+const cacheKey = () => `${CACHE_PREFIX}:${firstStored(['username','Username']) || 'current_user'}`;
 const expiry = () => firstStored(['session_expires_at','expires_at','Token_Expires_At','token_expires_at']);
 const redirectLogin = () => window.Auth?.redirectToLogin?.() || (location.href='../index.html');
 
@@ -540,12 +542,58 @@ function renderAll(){
   syncAiPanelHeight();
 }
 
-async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.8.0] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.8.0] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
-function saveCache(response){ localStorage.setItem(cacheKey(),JSON.stringify({saved_at:new Date().toISOString(),response})); }
-function readCache(){ try{ const value=JSON.parse(localStorage.getItem(cacheKey())||'null'); return value?.response?.dashboard?value:null; }catch{return null;} }
-function clearCache(){ Object.keys(localStorage).filter(k=>k.startsWith('ai_marketing_copilot_dashboard_cache_')).forEach(k=>localStorage.removeItem(k)); }
+async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.8.1] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.8.1] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
+function cleanupDashboardCaches({keepCurrent=true}={}){
+  const currentKey=cacheKey();
+  Object.keys(localStorage)
+    .filter(key=>key.startsWith('ai_marketing_copilot_dashboard_cache_'))
+    .forEach(key=>{
+      if(keepCurrent && key===currentKey)return;
+      try{localStorage.removeItem(key);}catch{}
+    });
+}
+function saveCache(response){
+  const cache={saved_at:new Date().toISOString(),response};
+  memoryCache=cache;
+
+  let serialized;
+  try{
+    serialized=JSON.stringify(cache);
+  }catch(error){
+    console.warn('[AI Marketing Copilot v4.8.1] ไม่สามารถแปลง Dashboard Cache ได้',error);
+    return false;
+  }
+
+  if(serialized.length>MAX_PERSISTENT_CACHE_CHARS){
+    cleanupDashboardCaches({keepCurrent:false});
+    console.info(`[AI Marketing Copilot v4.8.1] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
+    return false;
+  }
+
+  cleanupDashboardCaches({keepCurrent:true});
+
+  try{
+    localStorage.setItem(cacheKey(),serialized);
+    return true;
+  }catch(error){
+    cleanupDashboardCaches({keepCurrent:false});
+    console.warn('[AI Marketing Copilot v4.8.1] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง',error);
+    return false;
+  }
+}
+function readCache(){
+  if(memoryCache?.response?.dashboard)return memoryCache;
+  try{
+    const value=JSON.parse(localStorage.getItem(cacheKey())||'null');
+    return value?.response?.dashboard?value:null;
+  }catch{return null;}
+}
+function clearCache(){
+  memoryCache=null;
+  cleanupDashboardCaches({keepCurrent:false});
+}
 function setRefreshLoading(on){ const button=el('refreshDashboardButton'); if(!button)return; button.disabled=on; button.textContent=on?'กำลังรีเฟรช...':'รีเฟรชข้อมูล'; }
-async function sync(){ setRefreshLoading(true); try{ const result=await fetchDashboard(); saveCache(result); hydrate(result); }catch(error){ console.error(error); if([401,403].includes(error.httpStatus)){ clearCache(); redirectLogin(); } else if(!state.response){ text('loadingMessage',error.message || 'ไม่สามารถโหลด Dashboard ได้'); } }finally{ setRefreshLoading(false); } }
+async function sync(){ setRefreshLoading(true); try{ const result=await fetchDashboard(); hydrate(result); saveCache(result); }catch(error){ console.error(error); if([401,403].includes(error.httpStatus)){ clearCache(); redirectLogin(); } else if(!state.response){ text('loadingMessage',error.message || 'ไม่สามารถโหลด Dashboard ได้'); } }finally{ setRefreshLoading(false); } }
 function on(id,event,handler){ const node=el(id); if(node) node.addEventListener(event,handler); }
 function bindFilters(){
   document.querySelectorAll('.preset').forEach(button=>button.addEventListener('click',()=>{ document.querySelectorAll('.preset').forEach(x=>x.classList.remove('active')); button.classList.add('active'); state.days=button.dataset.days; state.pages={campaign:1,creative:1}; el('customRange')?.classList.toggle('hidden',state.days!=='custom'); if(state.days!=='custom') renderAll(); }));
@@ -565,7 +613,8 @@ function bindFilters(){
 async function start(){
   try {
     if(!token()){ clearCache(); redirectLogin(); return; }
-    console.info('[AI Marketing Copilot v4.8.0] Session token found. Calling Dashboard API.');
+    console.info('[AI Marketing Copilot v4.8.1] Session token found. Calling Dashboard API.');
+    cleanupDashboardCaches({keepCurrent:true});
     loadFilterState(); bindFilters();
     document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days)));
     el('customRange')?.classList.toggle('hidden',state.days!=='custom');

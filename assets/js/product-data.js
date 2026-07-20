@@ -1,7 +1,9 @@
 'use strict';
 
 window.CopilotData = (() => {
-  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v8';
+  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v9';
+  const MAX_PERSISTENT_CACHE_CHARS = 1000000;
+  let memoryCache = null;
 
   const first = (keys) => {
     for (const key of keys) {
@@ -17,7 +19,67 @@ window.CopilotData = (() => {
   const sid = () => first(['session_id', 'Session_ID', 'sessionId']);
 
   const cacheKey = () =>
-    `${CACHE_PREFIX}:${sid() || first(['username', 'Username']) || 'anonymous'}`;
+    `${CACHE_PREFIX}:${first(['username', 'Username']) || 'current_user'}`;
+
+  function cleanupDashboardCaches({ keepCurrent = true } = {}) {
+    const currentKey = cacheKey();
+
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith('ai_marketing_copilot_dashboard_cache_')) continue;
+      if (keepCurrent && key === currentKey) continue;
+
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+    }
+  }
+
+  function safeSaveCache(response) {
+    const cache = {
+      saved_at: new Date().toISOString(),
+      response,
+    };
+
+    // Keep the current API result available during this browser tab session.
+    memoryCache = cache;
+
+    let serialized;
+
+    try {
+      serialized = JSON.stringify(cache);
+    } catch (error) {
+      console.warn(
+        '[AI Marketing Copilot v4.8.1] ไม่สามารถแปลง Dashboard Cache ได้',
+        error
+      );
+      return false;
+    }
+
+    // Historical payload can exceed the browser's localStorage quota.
+    // The page must still render, so large payloads stay in memory only.
+    if (serialized.length > MAX_PERSISTENT_CACHE_CHARS) {
+      cleanupDashboardCaches({ keepCurrent: false });
+      console.info(
+        `[AI Marketing Copilot v4.8.1] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`
+      );
+      return false;
+    }
+
+    cleanupDashboardCaches({ keepCurrent: true });
+
+    try {
+      localStorage.setItem(cacheKey(), serialized);
+      return true;
+    } catch (error) {
+      // QuotaExceededError must never prevent the UI from rendering.
+      cleanupDashboardCaches({ keepCurrent: false });
+      console.warn(
+        '[AI Marketing Copilot v4.8.1] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง',
+        error
+      );
+      return false;
+    }
+  }
 
   const parseDate = (value) => {
     if (!value) return null;
@@ -94,18 +156,15 @@ window.CopilotData = (() => {
       throw error;
     }
 
-    localStorage.setItem(
-      cacheKey(),
-      JSON.stringify({
-        saved_at: new Date().toISOString(),
-        response: result,
-      })
-    );
-
+    safeSaveCache(result);
     return result;
   }
 
   function readCache() {
+    if (memoryCache?.response?.dashboard) {
+      return memoryCache.response;
+    }
+
     try {
       return JSON.parse(localStorage.getItem(cacheKey()) || 'null')?.response || null;
     } catch {
@@ -134,7 +193,7 @@ window.CopilotData = (() => {
 
       if (cached?.dashboard) {
         console.warn(
-          '[AI Marketing Copilot v4.8.0] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม',
+          '[AI Marketing Copilot v4.8.1] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม',
           error
         );
         return cached;

@@ -1,4 +1,4 @@
-# Frontend V4.7.0 — Creative UX & Asset Fix
+# Frontend V4.7.1 — Creative UX & Asset Fix
 
 - Creative and Creative Weekly now receive real Thumbnail URLs from Meta_Raw_Data via Builder Cache.
 - Weekly results are grouped into collapsible Winner / Promising / Watch / Loser sections.

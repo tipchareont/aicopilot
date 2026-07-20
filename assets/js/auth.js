@@ -23,6 +23,17 @@ window.Auth = (() => {
     'user_role',
   ];
 
+  const PROTECTED_ROUTES = new Set([
+    'dashboard',
+    'campaign',
+    'creative',
+    'creative-weekly',
+    'scale-advisor',
+    'ai-chat',
+  ]);
+
+  let redirectInProgress = false;
+
   const firstStored = (keys) => {
     for (const key of keys) {
       const value = localStorage.getItem(key);
@@ -30,6 +41,21 @@ window.Auth = (() => {
     }
     return '';
   };
+
+  const currentRoute = () => {
+    const segments = location.pathname
+      .replace(/\/+$/, '')
+      .split('/')
+      .filter(Boolean);
+
+    if (segments.at(-1) === 'index.html') {
+      return segments.at(-2) || '';
+    }
+
+    return segments.at(-1) || '';
+  };
+
+  const isProtectedRoute = () => PROTECTED_ROUTES.has(currentRoute());
 
   const parseBangkokDateTime = (value) => {
     if (!value) return null;
@@ -39,8 +65,7 @@ window.Auth = (() => {
 
     let normalized = raw.replace(' ', 'T');
 
-    // Backend เก็บเวลาเป็น Asia/Bangkok แต่ไม่มี timezone suffix
-    // จึงต้องเติม +07:00 ก่อน Parse เพื่อไม่ให้ Browser ตีความเป็นเวลาเครื่อง
+    // Backend stores Asia/Bangkok time without a timezone suffix.
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(normalized)) {
       normalized += '+07:00';
     } else if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
@@ -125,17 +150,32 @@ window.Auth = (() => {
 
   const hasUsableSession = () => Boolean(token()) && !isExpired();
 
-  const loginPath = () => {
-    const path = location.pathname.replace(/\/+/g, '/');
-    return /(\/dashboard\/|\/campaign\/|\/creative\/|\/scale-advisor\/|\/ai-chat\/)/.test(path)
-      ? '../index.html'
-      : 'index.html';
-  };
+  const loginPath = () =>
+    isProtectedRoute() ? '../index.html' : 'index.html';
 
   const redirectToLogin = () => {
+    if (redirectInProgress) return;
+    redirectInProgress = true;
+
     clearDashboardCache();
     clear();
-    location.replace(loginPath());
+
+    const target = new URL(loginPath(), location.href);
+
+    // Avoid replacing a page with itself if a future route is added incorrectly.
+    if (target.href === location.href) {
+      target.pathname = target.pathname.replace(/\/[^/]+\/index\.html$/, '/index.html');
+    }
+
+    location.replace(target.href);
+  };
+
+  const requireUsableSession = () => {
+    if (!isProtectedRoute()) return true;
+    if (hasUsableSession()) return true;
+
+    redirectToLogin();
+    return false;
   };
 
   return {
@@ -147,6 +187,12 @@ window.Auth = (() => {
     hasUsableSession,
     parseBangkokDateTime,
     clearDashboardCache,
+    currentRoute,
+    isProtectedRoute,
+    requireUsableSession,
     redirectToLogin,
   };
 })();
+
+// Global route guard: protected pages must never start loading data without a session.
+window.Auth.requireUsableSession();

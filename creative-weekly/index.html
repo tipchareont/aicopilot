@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Weekly Analyzer | AI Marketing Copilot</title>
+  <meta name="description" content="วิเคราะห์ Creative Group รายสัปดาห์จาก Performance จริง พร้อม Winner, Loser และแนวทางสร้าง Variation">
+  <link rel="stylesheet" href="../assets/css/app.css?v=4.6.0">
+  <link rel="stylesheet" href="../assets/css/product.css?v=4.6.0">
+  <link rel="stylesheet" href="../assets/css/creative-weekly.css?v=4.6.0">
+</head>
+<body>
+  <section id="loading" class="loading" aria-live="polite">
+    <div class="loading-spinner"></div>
+    <h2>กำลังเตรียม Creative Weekly Analyzer</h2>
+    <p id="loadingMessage">กำลังอ่านผลวิเคราะห์ล่าสุดจาก Dashboard Cache...</p>
+  </section>
+
+  <div id="shell" class="shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div>
+      <nav aria-label="Main navigation">
+        <a href="../dashboard/index.html"><span>Dashboard</span></a>
+        <a href="../campaign/index.html"><span>Campaign</span></a>
+        <a href="../creative/index.html"><span>Creative</span></a>
+        <a class="active" href="./index.html"><span>Creative Weekly</span></a>
+        <a href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
+        <a href="../ai-chat/index.html"><span>AI Chat</span></a>
+      </nav>
+      <div class="sidebar-footer">Performance Analysis · No Visual Claim</div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <div class="topbar-title"><h1>Creative Weekly Analyzer MVP</h1><p>หา Winner / Loser จาก Creative Group พร้อมแนวทางแตก Hook, Message, Visual และ CTA Variation</p></div>
+        <div class="topbar-actions"><button id="refreshButton" class="button-primary" type="button">รีเฟรชข้อมูล</button><div class="user-box"><div class="user-meta"><strong id="displayName">-</strong><span id="role">-</span></div><button id="logoutButton" class="button-secondary" type="button">Logout</button></div></div>
+      </header>
+
+      <main class="content">
+        <section class="weekly-notice">
+          <div><strong>วิเคราะห์จาก Performance ไม่ใช่การมองเห็นภาพ</strong><p>Winner / Loser เป็นผลเปรียบเทียบ Creative Group ใน Game + Account + Objective + Phase เดียวกัน ระบบยังไม่ได้เห็น Visual, Hook หรือ CTA จริง</p></div>
+          <span id="windowBadge" class="panel-badge">Window: -</span>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><div><h2>ตัวกรอง</h2><p>เลือก Creative Group ที่ต้องการตรวจหรือเทียบ</p></div><span id="updatedAt" class="panel-badge">-</span></div>
+          <div class="panel-body"><div class="filters weekly-filters">
+            <div class="field"><label>ค้นหา Creative Group</label><input id="searchFilter" placeholder="ชื่อ Creative Group..."></div>
+            <div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
+            <div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+            <div class="field"><label>Objective</label><select id="objectiveFilter"><option value="">ทั้งหมด</option></select></div>
+            <div class="field"><label>Analyzer Decision</label><select id="decisionFilter"><option value="">ทั้งหมด</option><option value="WINNER">Winner</option><option value="PROMISING">Promising</option><option value="WATCH">Watch</option><option value="LOSER">Loser</option><option value="INSUFFICIENT_DATA">ข้อมูลไม่พอ</option></select></div>
+          </div><div class="filter-actions" style="margin-top:12px"><button id="resetButton" class="button-secondary" type="button">รีเซ็ตตัวกรอง</button></div></div>
+        </section>
+
+        <section class="metrics weekly-metrics">
+          <article class="metric-card"><span>Winner</span><strong id="winnerCount">0</strong><small>อันดับบนพร้อม Sample เพียงพอ</small></article>
+          <article class="metric-card"><span>Promising</span><strong id="promisingCount">0</strong><small>ผลงานดีแต่ควรเพิ่ม Sample</small></article>
+          <article class="metric-card"><span>Watch</span><strong id="watchCount">0</strong><small>ควร Refresh และทดสอบใหม่</small></article>
+          <article class="metric-card"><span>Loser</span><strong id="loserCount">0</strong><small>ไม่ควรขยายก่อน Rework</small></article>
+          <article class="metric-card"><span>ข้อมูลไม่พอ</span><strong id="insufficientCount">0</strong><small>Peer หรือ Sample ยังไม่พอ</small></article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><div><h3>Weekly Creative Recommendation</h3><p>เรียง Winner → Promising → Watch → Loser โดยใช้ Main Metric ของ Objective</p></div><span id="resultBadge" class="panel-badge">0 creative groups</span></div>
+          <div id="weeklyList" class="weekly-list panel-body"><div class="empty">รอโหลดข้อมูล</div></div>
+        </section>
+
+        <footer class="footer-note">AI Marketing Copilot · Creative Weekly Analyzer MVP · Frontend V4.6.0</footer>
+      </main>
+    </section>
+  </div>
+
+  <script src="../assets/js/config.js?v=4.6.0"></script>
+  <script src="../assets/js/auth.js?v=4.6.0"></script>
+  <script src="../assets/js/product-data.js?v=4.6.0"></script>
+  <script src="../assets/js/creative-weekly.js?v=4.6.0"></script>
+</body>
+</html>

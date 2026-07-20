@@ -140,7 +140,7 @@
               <strong>${esc(row.entity_name || row.entity_type || 'หลักฐาน')}</strong>
               <span class="evidence-status">${esc(row.status || row.entity_type || '')}</span>
             </div>
-            <p>${esc([row.metric, row.value].filter(Boolean).join(': '))}${row.reason ? `<br>${esc(row.reason)}` : ''}${row.advisor_decision ? `<br><strong>Scale:</strong> ${esc(row.advisor_decision)}${row.budget_step_pct ? ` · Budget Step ${esc(row.budget_step_pct)}%` : ''}` : ''}${row.risk ? `<br><strong>Risk:</strong> ${esc(row.risk)}` : ''}${row.guardrail ? `<br><strong>Guardrail:</strong> ${esc(row.guardrail)}` : ''}</p>
+            <p>${esc([row.metric, row.value].filter(Boolean).join(': '))}${row.reason ? `<br>${esc(row.reason)}` : ''}${row.advisor_decision ? `<br><strong>Scale:</strong> ${esc(row.advisor_decision)}${row.budget_step_pct ? ` · Budget Step ${esc(row.budget_step_pct)}%` : ''}` : ''}${row.risk ? `<br><strong>Risk:</strong> ${esc(row.risk)}` : ''}${row.guardrail ? `<br><strong>Guardrail:</strong> ${esc(row.guardrail)}` : ''}${row.analyzer_decision ? `<br><strong>Creative Weekly:</strong> ${esc(row.analyzer_decision)}${row.weekly_rank ? ` · Rank ${esc(row.weekly_rank)}` : ''}` : ''}${row.suggested_test ? `<br><strong>Suggested Test:</strong> ${esc(row.suggested_test)}` : ''}</p>
           </div>
         `).join('')}</div>`
       : '';

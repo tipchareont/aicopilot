@@ -127,7 +127,7 @@ window.Auth = (() => {
 
   const loginPath = () => {
     const path = location.pathname.replace(/\/+/g, '/');
-    return /(\/dashboard\/|\/campaign\/|\/creative\/)/.test(path)
+    return /(\/dashboard\/|\/campaign\/|\/creative\/|\/ai-chat\/)/.test(path)
       ? '../index.html'
       : 'index.html';
   };

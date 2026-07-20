@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Chat | AI Marketing Copilot</title>
+  <meta name="description" content="ถาม AI Marketing Copilot จากข้อมูล Meta Ads จริง">
+  <link rel="stylesheet" href="../assets/css/app.css?v=4.4.0">
+  <link rel="stylesheet" href="../assets/css/product.css?v=4.4.0">
+  <link rel="stylesheet" href="../assets/css/chat.css?v=4.4.0">
+</head>
+<body>
+  <section id="loading" class="loading" aria-live="polite">
+    <div class="loading-spinner"></div>
+    <h2>กำลังเตรียม AI Chat</h2>
+    <p id="loadingMessage">กำลังตรวจสอบ Session และข้อมูลล่าสุด...</p>
+  </section>
+
+  <div id="shell" class="shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h2>AI Marketing Copilot</h2>
+        <p>Marketing Intelligence Platform</p>
+      </div>
+      <nav aria-label="Main navigation">
+        <a href="../dashboard/index.html"><span>Dashboard</span></a>
+        <a href="../campaign/index.html"><span>Campaign</span></a>
+        <a href="../creative/index.html"><span>Creative</span></a>
+        <a class="active" href="./index.html"><span>AI Chat</span></a>
+      </nav>
+      <div class="sidebar-footer">Meta Ads Data · Google Sheets Backend</div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>AI Marketing Chat</h1>
+          <p>ถามจากข้อมูลจริง พร้อมวันที่และหลักฐานที่ใช้ตอบ</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="user-box">
+            <div class="user-meta">
+              <strong id="displayName">-</strong>
+              <span id="role">-</span>
+            </div>
+            <button id="logoutButton" class="button-secondary" type="button">Logout</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="content chat-page">
+        <section class="chat-layout">
+          <aside class="panel chat-control-panel">
+            <div class="panel-header">
+              <div>
+                <h2>ขอบเขตคำถาม</h2>
+                <p>จำกัด Game หรือ Account ก่อนส่งคำถามได้</p>
+              </div>
+              <span id="dataDateBadge" class="panel-badge">รอข้อมูล</span>
+            </div>
+            <div class="panel-body chat-controls">
+              <div class="field">
+                <label for="gameFilter">Game</label>
+                <select id="gameFilter"><option value="">ทุก Game ที่มีสิทธิ์</option></select>
+              </div>
+              <div class="field">
+                <label for="accountFilter">Account</label>
+                <select id="accountFilter"><option value="">ทุก Account ที่มีสิทธิ์</option></select>
+              </div>
+
+              <div class="chat-policy">
+                <strong>AI จะทำอะไร</strong>
+                <p>ตอบจาก Cache จริง ระบุวันที่ข้อมูล และใช้ Campaign Status จาก Scoring_Rules เท่านั้น</p>
+              </div>
+
+              <div class="chat-policy muted-policy">
+                <strong>AI จะไม่ทำอะไร</strong>
+                <p>ไม่สร้างตัวเลข ไม่อ้างว่าเห็น Visual และไม่ปรับ Ads อัตโนมัติ</p>
+              </div>
+            </div>
+          </aside>
+
+          <section class="panel chat-main-panel">
+            <div class="panel-header chat-header">
+              <div>
+                <h2>ถาม AI Marketing Copilot</h2>
+                <p id="scopeLabel">Scope: ทุกข้อมูลที่มีสิทธิ์</p>
+              </div>
+              <button id="clearChatButton" class="button-secondary" type="button">ล้างบทสนทนา</button>
+            </div>
+
+            <div id="chatMessages" class="chat-messages" aria-live="polite">
+              <article class="chat-message assistant-message">
+                <div class="message-label">AI Copilot</div>
+                <div class="message-bubble">
+                  ถามได้เลย เช่น วันนี้ควรทำอะไรก่อน, Campaign ไหนต้องรีบตรวจ หรือ Creative ไหนมี Performance ดีที่สุด
+                </div>
+              </article>
+            </div>
+
+            <div class="suggestion-wrap">
+              <button class="suggestion" type="button" data-question="วันนี้ควรทำอะไรก่อน?">วันนี้ควรทำอะไรก่อน?</button>
+              <button class="suggestion" type="button" data-question="Campaign ไหนต้องรีบตรวจ และเพราะอะไร?">Campaign ที่ต้องรีบตรวจ</button>
+              <button class="suggestion" type="button" data-question="Campaign ไหนทำผลงานดีที่สุดจาก Status ล่าสุด?">Campaign ที่ดีที่สุด</button>
+              <button class="suggestion" type="button" data-question="Creative ไหนมีผลงานดีที่สุดและแย่ที่สุดใน 7 วันล่าสุด?">Creative ดีและแย่</button>
+            </div>
+
+            <form id="chatForm" class="chat-composer">
+              <textarea id="questionInput" rows="3" maxlength="1500" placeholder="พิมพ์คำถามเกี่ยวกับ Campaign, Creative หรือสิ่งที่ควรทำวันนี้..." required></textarea>
+              <div class="composer-footer">
+                <span id="characterCount">0 / 1,500</span>
+                <button id="sendButton" class="button-primary" type="submit">ส่งคำถาม</button>
+              </div>
+            </form>
+          </section>
+        </section>
+
+        <footer class="footer-note">AI Marketing Copilot · AI Chat MVP V4.4.0</footer>
+      </main>
+    </section>
+  </div>
+
+  <script src="../assets/js/config.js?v=4.4.0"></script>
+  <script src="../assets/js/auth.js?v=4.4.0"></script>
+  <script src="../assets/js/product-data.js?v=4.4.0"></script>
+  <script src="../assets/js/chat.js?v=4.4.0"></script>
+</body>
+</html>

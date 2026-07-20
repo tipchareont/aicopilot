@@ -1,4 +1,4 @@
-# Frontend V4.4.0 — AI Chat MVP
+# Frontend V4.5.0 — AI Chat MVP
 
 ## Added
 

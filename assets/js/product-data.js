@@ -1,7 +1,7 @@
 'use strict';
 
 window.CopilotData = (() => {
-  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v7';
+  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v8';
 
   const first = (keys) => {
     for (const key of keys) {
@@ -120,16 +120,28 @@ window.CopilotData = (() => {
       });
     }
 
-    if (!refresh) {
+    if (refresh) {
+      return fetchFresh();
+    }
+
+    // Accuracy first: request the latest Dashboard Cache before rendering.
+    // If the API is temporarily unavailable, use the most recent browser cache
+    // so the page remains usable.
+    try {
+      return await fetchFresh();
+    } catch (error) {
       const cached = readCache();
 
       if (cached?.dashboard) {
-        fetchFresh().catch(() => {});
+        console.warn(
+          '[AI Marketing Copilot v4.8.0] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม',
+          error
+        );
         return cached;
       }
-    }
 
-    return fetchFresh();
+      throw error;
+    }
   }
 
   const rows = (response, key) =>

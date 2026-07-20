@@ -1,8 +1,8 @@
 'use strict';
 
-const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v7';
-const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v1';
-const state = { response:null, rows:{account:[],campaign:[],creative:[],creativeGroup:[],aiSummary:[]}, days:7, customFrom:'', customTo:'', filters:{game:'',account:'',objective:''}, trendMetric:'spend', pages:{campaign:1,creative:1}, pageSize:10, charts:{} };
+const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v8';
+const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v2';
+const state = { response:null, rows:{account:[],campaign:[],creative:[],creativeGroup:[],aiSummary:[]}, days:'all', customFrom:'', customTo:'', filters:{game:'',account:'',objective:''}, trendMetric:'spend', pages:{campaign:1,creative:1}, pageSize:10, charts:{} };
 const el = (id) => document.getElementById(id);
 const text = (id,value) => { const node=el(id); if(node) node.textContent=value ?? '-'; };
 const escapeHtml = (value) => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
@@ -39,8 +39,8 @@ function rows(section){ return Array.isArray(section?.rows)?section.rows:[]; }
 function normalizeApiResult(value){ let result=value; if(Array.isArray(result)) result=result[0]; if(result && typeof result==='object' && Object.keys(result).length===1 && typeof result.body==='string'){ try{result=JSON.parse(result.body);}catch{} } if(typeof result==='string') result=JSON.parse(result); return result; }
 
 function saveFilterState(){ localStorage.setItem(FILTER_KEY,JSON.stringify({days:state.days,customFrom:state.customFrom,customTo:state.customTo,filters:state.filters,trendMetric:state.trendMetric})); }
-function loadFilterState(){ try{ const v=JSON.parse(localStorage.getItem(FILTER_KEY)||'null'); if(!v)return; state.days=v.days||7; state.customFrom=v.customFrom||''; state.customTo=v.customTo||''; state.filters={...state.filters,...(v.filters||{})}; state.trendMetric=v.trendMetric||'spend'; }catch{} }
-function resetFilterState(){ state.days=7; state.customFrom=''; state.customTo=''; state.filters={game:'',account:'',objective:''}; state.trendMetric='spend'; state.pages={campaign:1,creative:1}; localStorage.removeItem(FILTER_KEY); document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days==='7')); el('customRange').classList.add('hidden'); el('dateFrom').value=''; el('dateTo').value=''; if(el('trendMetric'))el('trendMetric').value='spend'; buildFilterOptions(); renderAll(); }
+function loadFilterState(){ try{ const v=JSON.parse(localStorage.getItem(FILTER_KEY)||'null'); if(!v)return; state.days=v.days||'all'; state.customFrom=v.customFrom||''; state.customTo=v.customTo||''; state.filters={...state.filters,...(v.filters||{})}; state.trendMetric=v.trendMetric||'spend'; }catch{} }
+function resetFilterState(){ state.days='all'; state.customFrom=''; state.customTo=''; state.filters={game:'',account:'',objective:''}; state.trendMetric='spend'; state.pages={campaign:1,creative:1}; localStorage.removeItem(FILTER_KEY); document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days==='all')); el('customRange').classList.add('hidden'); el('dateFrom').value=''; el('dateTo').value=''; if(el('trendMetric'))el('trendMetric').value='spend'; buildFilterOptions(); renderAll(); }
 function hydrate(response){
   if(!response?.success || !response?.dashboard) throw new Error(response?.message || 'Dashboard payload ไม่ถูกต้อง');
   const nextRows={account:rows(response.dashboard.account),campaign:rows(response.dashboard.campaign),creative:rows(response.dashboard.creative),creativeGroup:rows(response.dashboard.creative_group),aiSummary:rows(response.dashboard.ai_summary)};
@@ -57,7 +57,14 @@ function hydrate(response){
     console.error('Dashboard render error:', error);
     text('dashboardUpdatedAt','โหลดข้อมูลสำเร็จ แต่บางส่วนแสดงผลไม่ครบ');
   }
-  text('dashboardUpdatedAt',`อัปเดต ${formatDateTime(updatedAt(response) || new Date().toISOString())}`);
+  const coverage=dataCoverage();
+  const coverageText=coverage
+    ? `ข้อมูล ${formatDate(coverage.from)} – ${formatDate(coverage.to)}`
+    : 'ไม่พบช่วงข้อมูล';
+  text(
+    'dashboardUpdatedAt',
+    `${coverageText} · อัปเดต ${formatDateTime(updatedAt(response) || new Date().toISOString())}`
+  );
 }
 
 
@@ -71,9 +78,29 @@ function buildFilterOptions(){
   const objectives=uniqueSorted(all.map(r=>field(r,['Objective_Display','Objective'])));
   el('gameFilter').innerHTML=optionHtml(games,state.filters.game); el('accountFilter').innerHTML=optionHtml(accounts,state.filters.account); el('objectiveFilter').innerHTML=optionHtml(objectives,state.filters.objective);
 }
-function latestDataDate(){ const all=[...state.rows.account,...state.rows.campaign,...state.rows.creative]; const dates=all.map(r=>parseDate(field(r,['Date','Data_Date','date']))).filter(Boolean).sort((a,b)=>b-a); return dates[0] || new Date(); }
+function allDataDates(){
+  const all=[...state.rows.account,...state.rows.campaign,...state.rows.creative];
+  return all
+    .map(r=>parseDate(field(r,['Date','Data_Date','date'])))
+    .filter(Boolean)
+    .sort((a,b)=>a-b);
+}
+function latestDataDate(){ const dates=allDataDates(); return dates.at(-1) || new Date(); }
+function dataCoverage(){
+  const dates=allDataDates();
+  if(!dates.length) return null;
+  return {from:new Date(dates[0]),to:new Date(dates.at(-1))};
+}
 function activeRange(){
   if(state.days==='custom' && state.customFrom && state.customTo) return {from:parseDate(state.customFrom),to:parseDate(state.customTo)};
+  if(state.days==='all'){
+    const coverage=dataCoverage();
+    if(coverage){
+      coverage.from.setHours(0,0,0,0);
+      coverage.to.setHours(23,59,59,999);
+      return coverage;
+    }
+  }
   const to=latestDataDate(); const from=new Date(to); from.setDate(from.getDate()-(Number(state.days)-1)); from.setHours(0,0,0,0); to.setHours(23,59,59,999); return {from,to};
 }
 function withinDate(row,range){ const d=parseDate(field(row,['Date','Data_Date','date'])); if(!d) return true; return d>=range.from && d<=range.to; }
@@ -89,6 +116,7 @@ function aggregate(rowsToSum){
 }
 function accountMetricRows(){ const account=filtered('account'); return account.length?account:filtered('campaign'); }
 function previousRangeRows(){
+  if(state.days==='all') return [];
   const current=activeRange(); const span=Math.max(1,Math.round((current.to-current.from)/86400000)+1); const to=new Date(current.from); to.setDate(to.getDate()-1); to.setHours(23,59,59,999); const from=new Date(to); from.setDate(from.getDate()-(span-1)); from.setHours(0,0,0,0);
   return state.rows.account.filter(r=>{ const d=parseDate(field(r,['Date','Data_Date','date'])); if(!d || d<from || d>to) return false; const game=String(field(r,['Game_Name','Game_ID'])); const account=String(field(r,['Account_Name','Ad_Account_Name','Entity_Name'])); const objective=String(field(r,['Objective_Display','Objective'])); return (!state.filters.game||game===state.filters.game)&&(!state.filters.account||account===state.filters.account)&&(!state.filters.objective||objective===state.filters.objective); });
 }
@@ -102,7 +130,7 @@ function byDate(rowsToGroup){ const map=new Map(); for(const r of rowsToGroup){ 
 function destroyChart(name){ state.charts[name]?.destroy?.(); }
 function chartAvailable(){ return typeof Chart !== 'undefined'; }
 function renderTrend(){
-  const series=byDate(accountMetricRows()); text('trendBadge',state.days==='custom'?'กำหนดเอง':`${state.days} วัน`); if(!chartAvailable()) return;
+  const series=byDate(accountMetricRows()); text('trendBadge',state.days==='all'?'ย้อนหลังทั้งหมด':state.days==='custom'?'กำหนดเอง':`${state.days} วัน`); if(!chartAvailable()) return;
   const config={spend:{label:'Spend',suffix:'฿',value:x=>x.spend},results:{label:'Results',suffix:'',value:x=>x.results},cpr:{label:'Cost / Result',suffix:'฿',value:x=>x.cpr},ctr:{label:'CTR',suffix:'%',value:x=>x.ctr},clicks:{label:'Clicks',suffix:'',value:x=>x.clicks},lpv:{label:'LPV',suffix:'',value:x=>x.lpv}}[state.trendMetric] || {label:'Spend',suffix:'฿',value:x=>x.spend};
   destroyChart('trend'); state.charts.trend=new Chart(el('trendChart'),{type:'line',data:{labels:series.map(x=>x.date),datasets:[{label:config.label,data:series.map(config.value),fill:false,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>`${config.label}: ${config.suffix}${new Intl.NumberFormat('th-TH',{maximumFractionDigits:2}).format(ctx.parsed.y)}`}}},scales:{y:{beginAtZero:true}}}});
 }
@@ -512,7 +540,7 @@ function renderAll(){
   syncAiPanelHeight();
 }
 
-async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.3.3] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.3.3] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
+async function fetchDashboard(){ const url=window.APP_CONFIG?.DASHBOARD_URL; if(!url) throw new Error('ไม่พบ Dashboard URL'); console.info('[AI Marketing Copilot v4.8.0] POST',url); const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:token()})}); const raw=await response.text(); if(!raw.trim()) throw new Error('Dashboard API ไม่ได้ส่งข้อมูลกลับมา'); let result; try{result=normalizeApiResult(JSON.parse(raw));}catch{throw new Error('Dashboard API ส่งข้อมูลที่อ่านไม่ได้');} console.info('[AI Marketing Copilot v4.8.0] Dashboard API response',response.status,result); if(!response.ok || !result?.success || !result?.dashboard){ const error=new Error(result?.message || `Dashboard API Error (${response.status})`); error.httpStatus=Number(result?.http_status || response.status || 500); throw error; } return result; }
 function saveCache(response){ localStorage.setItem(cacheKey(),JSON.stringify({saved_at:new Date().toISOString(),response})); }
 function readCache(){ try{ const value=JSON.parse(localStorage.getItem(cacheKey())||'null'); return value?.response?.dashboard?value:null; }catch{return null;} }
 function clearCache(){ Object.keys(localStorage).filter(k=>k.startsWith('ai_marketing_copilot_dashboard_cache_')).forEach(k=>localStorage.removeItem(k)); }
@@ -537,7 +565,7 @@ function bindFilters(){
 async function start(){
   try {
     if(!token()){ clearCache(); redirectLogin(); return; }
-    console.info('[AI Marketing Copilot v4.3.3] Session token found. Calling Dashboard API.');
+    console.info('[AI Marketing Copilot v4.8.0] Session token found. Calling Dashboard API.');
     loadFilterState(); bindFilters();
     document.querySelectorAll('.preset').forEach(x=>x.classList.toggle('active',x.dataset.days===String(state.days)));
     el('customRange')?.classList.toggle('hidden',state.days!=='custom');

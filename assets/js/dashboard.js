@@ -23,7 +23,14 @@ function safeDivide(a,b){ return num(b)>0 ? num(a)/num(b) : 0; }
 function displayObjectiveValue(value){ const raw=String(value ?? '').trim(); if(!raw) return ''; const upper=raw.toUpperCase(); if(['SALE','SALES','CONVERSION'].includes(upper)) return 'Conversion'; if(upper==='AWARENESS') return 'Awareness'; if(upper==='TRAFFIC') return 'Traffic'; if(upper==='ENGAGEMENT') return 'Engagement'; if(upper==='LEADS') return 'Leads'; return raw; }
 function displayObjective(row){ return displayObjectiveValue(field(row,['Objective_Display','Objective'],'')); }
 function isConversionObjective(row){ return displayObjective(row).toUpperCase()==='CONVERSION'; }
-function completeRegisterMetric(row){ const direct=field(row,['Complete_Register','Complete_Registers','Complete_Registration','Complete_Registrations','Complete Register','CompleteRegister','New_Register','New_Registers'],null); if(direct!==null && direct!=='') return num(direct); return isConversionObjective(row)?metric(row,'results'):0; }
+function completeRegisterMetric(row){
+  const direct=field(row,['Complete_Register','Complete_Registers','Complete_Registration','Complete_Registrations','Complete Register','CompleteRegister','New_Register','New_Registers'],null);
+  if(direct!==null && direct!=='') return num(direct);
+  const resultType=String(field(row,['Result_Type','ResultType','result_type','Meta_Result_Type'],'')).toLowerCase().replace(/[\s_-]+/g,'');
+  const completeTypes=['completeregistration','completedregistration','completeregister','completedregister','registrationcomplete','newregister'];
+  if(completeTypes.includes(resultType)) return metric(row,'results');
+  return !resultType && isConversionObjective(row) ? metric(row,'results') : 0;
+}
 function parseDate(value){
   if(!value) return null;
   const raw=String(value).trim().replace(' ','T');

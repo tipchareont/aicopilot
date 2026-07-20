@@ -108,23 +108,10 @@
     ];
   }
 
-  function exampleSet(type, objective) {
-    const objectiveLabel = D.displayObjective(objective) || 'Conversion';
-    if (type === 'cta') {
-      if (objectiveLabel === 'Conversion') return ['สมัครเลยตอนนี้', 'รับสิทธิ์แล้วเริ่มเล่นเลย'];
-      if (objectiveLabel === 'Traffic') return ['ดูรายละเอียดเพิ่มเติม', 'คลิกเพื่อดูข้อมูล'];
-      if (objectiveLabel === 'Awareness') return ['ทำความรู้จักเกมนี้', 'ดูจุดเด่นเพิ่มเติม'];
-      if (objectiveLabel === 'Engagement') return ['คอมเมนต์ความเห็นของคุณ', 'ร่วมกิจกรรมตอนนี้'];
-      return ['กดดูรายละเอียด', 'ทดลองคลิกดู'];
-    }
-    if (type === 'hook') return ['เปิดด้วยประโยคสั้นที่สื่อประโยชน์ชัดเจน', 'เปิดด้วยคำถามที่ชวนหยุดดู'];
-    if (type === 'message') return ['เน้น 1 จุดเด่นหลักแล้วตามด้วยประโยชน์ที่ผู้เล่นจะได้', 'เปลี่ยนถ้อยคำให้ตรง Pain Point มากขึ้น'];
-    if (type === 'visual') return ['เวอร์ชัน A: ตัวละครเด่น + headline ชัด', 'เวอร์ชัน B: โฟกัสของรางวัล/ระบบเกม + CTA เด่น'];
-    return ['ตัวอย่างที่ 1', 'ตัวอย่างที่ 2'];
-  }
-
-  function exampleDropdown(title, items) {
-    return `<details class="example-toggle"><summary>${esc(title)}</summary><div class="example-toggle-body"><ul>${items.map((item) => `<li>${esc(item)}</li>`).join('')}</ul></div></details>`;
+  function aiExampleButton(type, row) {
+    const index = Number(row.__rowIndex);
+    const label = { hook: 'Hook', message: 'Message', visual: 'Visual Direction', cta: 'CTA' }[type] || type;
+    return `<div class="ai-example-area"><button type="button" class="ai-example-button" data-example-type="${esc(type)}" data-row-index="${index}">✨ ให้ AI สร้างตัวอย่าง ${esc(label)} 2 แบบ</button><div class="ai-example-result" id="ai-example-${index}-${esc(type)}"></div></div>`;
   }
 
   function renderActionFocus(row) {
@@ -168,7 +155,7 @@
 
         <div class="detail-columns">
           <section class="compact-block"><h5>ทำไมระบบแนะนำแบบนี้</h5>${list(row.Reasons)}<h5>ความเสี่ยงที่ต้องรู้</h5>${list(row.Risks)}</section>
-          <section class="compact-block plan-block"><h5>Variation Plan</h5><div class="plan-row"><b>Hook</b><p>${esc(plan.hook || '-')}</p></div>${exampleDropdown('ดูตัวอย่าง Hook 2 แบบ', exampleSet('hook', objective))}<div class="plan-row"><b>Message</b><p>${esc(plan.message || '-')}</p></div>${exampleDropdown('ดูตัวอย่าง Message 2 แบบ', exampleSet('message', objective))}<div class="plan-row"><b>Visual</b><p>${esc(plan.visual || '-')}</p></div>${exampleDropdown('ดูตัวอย่าง Visual Direction', exampleSet('visual', objective))}<div class="plan-row"><b>CTA</b><p>${esc(plan.cta || '-')}</p></div>${exampleDropdown('ดูตัวอย่าง CTA 2 แบบ', exampleSet('cta', objective))}</section>
+          <section class="compact-block plan-block"><h5>Variation Plan</h5><div class="plan-row"><b>Hook</b><p>${esc(plan.hook || '-')}</p></div>${aiExampleButton('hook', row)}<div class="plan-row"><b>Message</b><p>${esc(plan.message || '-')}</p></div>${aiExampleButton('message', row)}<div class="plan-row"><b>Visual</b><p>${esc(plan.visual || '-')}</p></div>${aiExampleButton('visual', row)}<div class="plan-row"><b>CTA</b><p>${esc(plan.cta || '-')}</p></div>${aiExampleButton('cta', row)}</section>
         </div>
 
         <details class="secondary-details"><summary>ดู Test Rule, Coverage และข้อจำกัด</summary><div class="secondary-grid"><section><h5>Test Rule</h5><p>${esc(plan.test_rule || '-')}</p></section><section><h5>Creative Coverage</h5><p>${D.integer(arr(row.Creative_IDs).length)} Creative IDs · ${D.integer(campaignCount)} Campaigns · ${esc(arr(row.Creative_Types).join(', ') || '-')}</p></section><section><h5>ข้อจำกัด</h5>${list(row.Limitations)}</section></div></details>
@@ -221,13 +208,92 @@
     $('weeklyList').innerHTML = sections || '<div class="empty">ไม่พบ Creative Group ตามตัวกรอง หรือ Cache Creative Weekly ยังไม่มีข้อมูล</div>';
   }
 
+  function promptForExample(row, type) {
+    const label = { hook: 'Hook', message: 'Message', visual: 'Visual Direction', cta: 'CTA' }[type] || type;
+    const plan = row.Test_Plan || {};
+    const currentPlan = clean(plan[type] || '');
+    const objective = D.displayObjective(field(row, ['Objective'], '-')) || '-';
+    const creativeGroup = field(row, ['Creative_Group_Name'], '-');
+    const phase = field(row, ['Phase'], '-');
+
+    return [
+      `ช่วยสร้างตัวอย่าง ${label} ภาษาไทย 2 แบบ สำหรับ Creative Group: ${creativeGroup}`,
+      `Objective: ${objective}`,
+      `Phase: ${phase}`,
+      currentPlan ? `แนวทางที่ระบบแนะนำไว้: ${currentPlan}` : '',
+      'ตอบเฉพาะตัวอย่าง 2 แบบที่พร้อมนำไปใช้ ห้ามใส่ตัวเลข Performance ใหม่ ห้ามอธิบายยาว',
+      type === 'visual' ? 'สำหรับ Visual ให้เขียนเป็น Direction ที่ทีม Creative อ่านแล้วทำภาพต่อได้' : '',
+    ].filter(Boolean).join('\n');
+  }
+
+  async function generateExample(button) {
+    const index = Number(button.dataset.rowIndex);
+    const type = clean(button.dataset.exampleType);
+    const row = allRows[index];
+    const target = $(`ai-example-${index}-${type}`);
+    if (!row || !target || button.disabled) return;
+
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'AI กำลังสร้างตัวอย่าง...';
+    target.className = 'ai-example-result is-loading';
+    target.textContent = 'กำลังประมวลผลเฉพาะรายการนี้ จึงใช้ Token เฉพาะตอนกด';
+
+    try {
+      const url = window.APP_CONFIG?.AI_CHAT_URL;
+      if (!url) throw new Error('ไม่พบ AI Chat URL');
+
+      const apiResponse = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_token: window.Auth?.token?.(),
+          question: promptForExample(row, type),
+          game_id: field(row, ['Game_ID'], ''),
+          game_name: field(row, ['Game_Name'], ''),
+          account_id: field(row, ['Account_ID'], ''),
+          account_name: field(row, ['Account_Name'], ''),
+        }),
+      });
+
+      const raw = await apiResponse.text();
+      if (!raw.trim()) throw new Error('AI Chat API ไม่ได้ส่งข้อมูลกลับมา');
+
+      let result;
+      try {
+        result = JSON.parse(raw);
+        if (Array.isArray(result)) result = result[0];
+        if (result && typeof result === 'object' && typeof result.body === 'string') result = JSON.parse(result.body);
+      } catch {
+        throw new Error('AI Chat API ส่งข้อมูลที่อ่านไม่ได้');
+      }
+
+      if (!apiResponse.ok || !result?.success) {
+        const error = new Error(result?.message || `AI Chat API Error (${apiResponse.status})`);
+        error.httpStatus = Number(result?.http_status || apiResponse.status || 500);
+        throw error;
+      }
+
+      target.className = 'ai-example-result is-ready';
+      target.textContent = clean(result.answer) || 'AI ไม่ได้ส่งตัวอย่างกลับมา';
+      button.textContent = '✨ สร้างตัวอย่างใหม่อีกครั้ง';
+    } catch (error) {
+      if (Number(error.httpStatus) === 401) return window.Auth?.redirectToLogin?.();
+      target.className = 'ai-example-result is-error';
+      target.textContent = `สร้างตัวอย่างไม่สำเร็จ: ${error.message || 'เกิดข้อผิดพลาด'}`;
+      button.textContent = originalText;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function load(refresh = false) {
     $('loadingMessage').textContent = refresh ? 'กำลังรีเฟรชข้อมูลล่าสุด...' : 'กำลังอ่าน Creative Weekly Analyzer Cache...';
     if (!window.Auth?.hasUsableSession?.()) return window.Auth.redirectToLogin();
 
     try {
       response = await D.load({ refresh });
-      allRows = D.rows(response, 'creative_weekly_analyzer');
+      allRows = D.rows(response, 'creative_weekly_analyzer').map((row, index) => ({ ...row, __rowIndex: index }));
       uniqueOptions('gameFilter', allRows, (row) => clean(field(row, ['Game_Name', 'Game_ID'])));
       uniqueOptions('accountFilter', allRows, (row) => clean(field(row, ['Account_Name', 'Account_ID'])));
       uniqueOptions('objectiveFilter', allRows, (row) => D.displayObjective(field(row, ['Objective'], '')));
@@ -256,6 +322,11 @@
     $('objectiveFilter').value = '';
     $('decisionFilter').value = '';
     render();
+  });
+
+  $('weeklyList').addEventListener('click', (event) => {
+    const button = event.target.closest('.ai-example-button');
+    if (button) generateExample(button);
   });
 
   $('refreshButton').addEventListener('click', () => load(true));

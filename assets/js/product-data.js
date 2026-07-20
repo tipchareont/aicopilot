@@ -34,13 +34,13 @@ window.CopilotData = (() => {
     try {
       serialized = JSON.stringify(cache);
     } catch (error) {
-      console.warn('[AI Marketing Copilot v4.9.0] ไม่สามารถแปลง Dashboard Cache ได้', error);
+      console.warn('[AI Marketing Copilot v4.9.1] ไม่สามารถแปลง Dashboard Cache ได้', error);
       return false;
     }
 
     if (serialized.length > MAX_PERSISTENT_CACHE_CHARS) {
       cleanupDashboardCaches({ keepCurrent: false });
-      console.info(`[AI Marketing Copilot v4.9.0] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
+      console.info(`[AI Marketing Copilot v4.9.1] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
       return false;
     }
 
@@ -50,7 +50,7 @@ window.CopilotData = (() => {
       return true;
     } catch (error) {
       cleanupDashboardCaches({ keepCurrent: false });
-      console.warn('[AI Marketing Copilot v4.9.0] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง', error);
+      console.warn('[AI Marketing Copilot v4.9.1] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง', error);
       return false;
     }
   }
@@ -124,7 +124,7 @@ window.CopilotData = (() => {
     } catch (error) {
       const cached = readCache();
       if (cached?.dashboard) {
-        console.warn('[AI Marketing Copilot v4.9.0] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม', error);
+        console.warn('[AI Marketing Copilot v4.9.1] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม', error);
         return cached;
       }
       throw error;
@@ -167,6 +167,31 @@ window.CopilotData = (() => {
     return label === 'CONVERSION';
   }
 
+  function normalizeResultType(value) {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '');
+  }
+
+  function isCompleteRegistrationResult(row) {
+    const type = normalizeResultType(field(row, [
+      'Result_Type',
+      'ResultType',
+      'result_type',
+      'Meta_Result_Type',
+    ], ''));
+
+    return [
+      'completeregistration',
+      'completedregistration',
+      'completeregister',
+      'completedregister',
+      'newregister',
+      'registrationcomplete',
+    ].includes(type);
+  }
+
   const metric = (row, name) => {
     const map = {
       spend: ['Spend', 'Amount_Spent'],
@@ -203,7 +228,21 @@ window.CopilotData = (() => {
     if (name === 'completeRegister') {
       const explicit = field(row, map.completeRegister, null);
       if (explicit !== null && explicit !== '') return num(explicit);
-      return isConversionObjective(row) ? num(field(row, ['Results', 'Result'], 0)) : 0;
+
+      // Primary fallback requested by Product Owner:
+      // Result_Type = Complete Registration means Results is the register count.
+      if (isCompleteRegistrationResult(row)) {
+        return num(field(row, ['Results', 'Result'], 0));
+      }
+
+      // Intelligence cache rows from older versions may not carry Result_Type.
+      // Only in that legacy case, use Results for Conversion objective.
+      const hasResultType = field(row, ['Result_Type', 'ResultType', 'result_type', 'Meta_Result_Type'], null);
+      if ((hasResultType === null || hasResultType === '') && isConversionObjective(row)) {
+        return num(field(row, ['Results', 'Result'], 0));
+      }
+
+      return 0;
     }
 
     if (name === 'cpcr') {
@@ -277,5 +316,7 @@ window.CopilotData = (() => {
     displayObjective,
     normalizeObjectiveValue,
     isConversionObjective,
+    isCompleteRegistrationResult,
+    normalizeResultType,
   };
 })();

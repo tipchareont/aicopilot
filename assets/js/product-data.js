@@ -1,7 +1,7 @@
 'use strict';
 
 window.CopilotData = (() => {
-  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v6';
+  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v7';
 
   const first = (keys) => {
     for (const key of keys) {

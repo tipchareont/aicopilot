@@ -1,4 +1,4 @@
-# Frontend V4.6.0 — Creative Weekly Analyzer MVP
+# Frontend V4.7.0 — Creative Weekly Analyzer MVP
 
 - เพิ่มหน้า Creative Weekly Analyzer
 - แสดง Winner / Promising / Watch / Loser / Insufficient Data

@@ -12,6 +12,7 @@
   const esc = (value) => D.esc(value);
   const field = (row, names, fallback = '') => D.field(row, names, fallback);
 
+  const decisionOrder = ['WINNER', 'PROMISING', 'WATCH', 'LOSER', 'INSUFFICIENT_DATA'];
   const labels = {
     WINNER: 'Winner',
     PROMISING: 'Promising',
@@ -19,13 +20,25 @@
     LOSER: 'Loser',
     INSUFFICIENT_DATA: 'ข้อมูลไม่พอ',
   };
-
+  const groupDescriptions = {
+    WINNER: 'ทำต่อและแตก Variation โดยใช้ตัวนี้เป็น Control',
+    PROMISING: 'เพิ่ม Sample ผ่านการทดสอบขนาดเล็ก',
+    WATCH: 'Refresh หนึ่งองค์ประกอบและติดตามผล',
+    LOSER: 'หยุดขยายและ Rework ก่อนกลับมาทดสอบ',
+    INSUFFICIENT_DATA: 'ยังไม่ตัดสินจนกว่าจะมี Sample หรือ Peer เพิ่ม',
+  };
   const actionLabels = {
     CONTINUE_AND_VARIATE: 'ทำต่อและแตก Variation',
     TEST_VARIATION: 'ทดลอง Variation',
-    REFRESH_TEST: 'Refresh & Test',
+    REFRESH_TEST: 'Refresh แล้วทดสอบใหม่',
     REDUCE_AND_REWORK: 'ลด Priority และ Rework',
     COLLECT_MORE_DATA: 'เก็บข้อมูลเพิ่ม',
+  };
+  const momentumLabels = {
+    IMPROVING: 'ดีขึ้น',
+    STABLE: 'ทรงตัว',
+    WORSENING: 'แย่ลง',
+    UNKNOWN: 'ยังไม่มีข้อมูลเทียบ',
   };
 
   function showApp() {
@@ -56,39 +69,92 @@
     return value === null || value === '' ? 'N/A' : Number(value).toLocaleString('th-TH', { maximumFractionDigits: 4 });
   }
 
-  function renderCard(row) {
+  function assets(row) {
+    const list = arr(row.Creative_Assets).filter((asset) => clean(asset?.Thumbnail_URL));
+    if (list.length) return list;
+    const url = clean(field(row, ['Thumbnail_URL']));
+    return url ? [{
+      Creative_ID: field(row, ['Creative_ID']),
+      Creative_Name: field(row, ['Creative_Group_Name']),
+      Thumbnail_URL: url,
+      Creative_Type: field(row, ['Creative_Type']),
+    }] : [];
+  }
+
+  function imageBox(asset, className = '') {
+    const url = clean(asset?.Thumbnail_URL);
+    if (!url) return `<div class="creative-image ${className} image-failed"><span>ไม่มีรูป Creative</span></div>`;
+    return `<a class="creative-image ${className}" href="${esc(url)}" target="_blank" rel="noopener noreferrer" title="เปิดรูป Creative ขนาดเต็ม"><img src="${esc(url)}" alt="${esc(asset?.Creative_Name || 'Creative')}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('image-failed');this.remove()"><span>ไม่สามารถโหลดรูปได้</span></a>`;
+  }
+
+  function imageGallery(row) {
+    const items = assets(row).slice(0, 6);
+    if (!items.length) return imageBox(null, 'main-image');
+    return `<div class="asset-viewer">${imageBox(items[0], 'main-image')}<div class="asset-thumbs">${items.slice(1).map((asset) => imageBox(asset, 'mini-image')).join('')}</div><small>${D.integer(items.length)} Creative Asset${items.length > 1 ? 's' : ''}</small></div>`;
+  }
+
+  function nextSteps(row) {
+    const plan = row.Test_Plan || {};
+    const decision = upper(field(row, ['Analyzer_Decision'], 'INSUFFICIENT_DATA'));
+    const first = field(row, ['Recommendation'], '-');
+    let variable = plan.hook || plan.message || '-';
+    if (decision === 'WATCH') variable = plan.hook || plan.message || '-';
+    if (decision === 'LOSER') variable = plan.message || plan.hook || '-';
+    if (decision === 'INSUFFICIENT_DATA') variable = 'ยังไม่แก้ Creative จนกว่าจะมี Sample หรือ Peer เพียงพอ';
+    return [
+      first,
+      variable,
+      plan.test_rule || `ใช้ ${field(row, ['Main_Metric_Label'], 'Main Metric')} เดิมในการประเมิน`,
+    ];
+  }
+
+  function renderActionFocus(row) {
+    const action = upper(field(row, ['Recommended_Action']));
+    const steps = nextSteps(row);
+    return `<section class="action-focus"><div class="action-focus-title"><span>สิ่งที่ควรทำต่อ</span><strong>${esc(actionLabels[action] || action || 'Recommendation')}</strong></div><ol>${steps.map((step) => `<li>${esc(step)}</li>`).join('')}</ol></section>`;
+  }
+
+  function renderCreative(row) {
     const decision = upper(field(row, ['Analyzer_Decision'], 'INSUFFICIENT_DATA'));
     const action = upper(field(row, ['Recommended_Action']));
     const momentum = upper(field(row, ['Momentum'], 'UNKNOWN'));
     const plan = row.Test_Plan || {};
-    const cardClass = decision === 'WINNER' ? 'is-winner' : decision === 'PROMISING' ? 'is-promising' : decision === 'LOSER' ? 'is-loser' : decision === 'WATCH' ? 'is-watch' : '';
     const rank = D.integer(field(row, ['Weekly_Rank']));
     const peers = D.integer(field(row, ['Peer_Count']));
     const currentWindow = row.Current_Window || {};
+    const title = field(row, ['Creative_Group_Name'], '-');
+    const campaignCount = arr(row.Campaign_Names).length || arr(row.Campaign_IDs).length;
 
-    return `<article class="weekly-card ${cardClass}">
-      <div class="weekly-head">
-        <div class="weekly-title"><h3>${esc(field(row, ['Creative_Group_Name'], '-'))}</h3><p>${esc(field(row, ['Game_Name', 'Game_ID'], '-'))} · ${esc(field(row, ['Account_Name', 'Account_ID'], '-'))} · ${esc(field(row, ['Objective'], '-'))} · ${esc(field(row, ['Phase'], '-'))}</p></div>
-        <div class="weekly-badges"><span class="creative-decision decision-${esc(decision)}">${esc(labels[decision] || decision)}</span><span class="momentum momentum-${esc(momentum)}">${esc(momentum)}</span></div>
+    return `<details class="creative-item item-${esc(decision)}">
+      <summary class="creative-summary">
+        <div class="summary-image">${imageBox(assets(row)[0], 'summary-thumb')}</div>
+        <div class="summary-main"><div class="summary-title-line"><h4>${esc(title)}</h4><span class="creative-decision decision-${esc(decision)}">${esc(labels[decision] || decision)}</span></div><p>${esc(field(row, ['Game_Name', 'Game_ID'], '-'))} · ${esc(field(row, ['Objective'], '-'))} · ${esc(field(row, ['Phase'], '-'))}</p><strong class="summary-action">${esc(actionLabels[action] || action || '-')}</strong></div>
+        <div class="summary-metrics"><span>${esc(field(row, ['Main_Metric_Label'], 'Metric'))}<b>${esc(metricValue(row))}</b></span><span>Spend 7D<b>฿${D.money(field(row, ['Spend']))}</b></span><span>Rank<b>${rank} / ${peers}</b></span></div>
+        <span class="expand-label">ดูรายละเอียด</span>
+      </summary>
+
+      <div class="creative-detail">
+        <div class="creative-hero">
+          ${imageGallery(row)}
+          <div class="hero-content">
+            ${renderActionFocus(row)}
+            <div class="quick-facts"><span>Momentum <b class="momentum-text momentum-${esc(momentum)}">${esc(momentumLabels[momentum] || momentum)}</b></span><span>Confidence <b>${esc(field(row, ['Confidence'], '-'))}</b></span><span>Active Days <b>${D.integer(field(currentWindow, ['active_days']))}</b></span><span>Campaigns <b>${D.integer(campaignCount)}</b></span><span>Results <b>${D.integer(field(row, ['Results']))}</b></span><span>CTR <b>${(D.num(field(row, ['CTR'])) * 100).toFixed(2)}%</b></span></div>
+          </div>
+        </div>
+
+        <div class="detail-columns">
+          <section class="compact-block"><h5>ทำไมระบบแนะนำแบบนี้</h5>${list(row.Reasons)}<h5>ความเสี่ยงที่ต้องรู้</h5>${list(row.Risks)}</section>
+          <section class="compact-block plan-block"><h5>Variation Plan</h5><div class="plan-row"><b>Hook</b><p>${esc(plan.hook || '-')}</p></div><div class="plan-row"><b>Message</b><p>${esc(plan.message || '-')}</p></div><div class="plan-row"><b>Visual</b><p>${esc(plan.visual || '-')}</p></div><div class="plan-row"><b>CTA</b><p>${esc(plan.cta || '-')}</p></div></section>
+        </div>
+
+        <details class="secondary-details"><summary>ดู Test Rule, Coverage และข้อจำกัด</summary><div class="secondary-grid"><section><h5>Test Rule</h5><p>${esc(plan.test_rule || '-')}</p></section><section><h5>Creative Coverage</h5><p>${D.integer(arr(row.Creative_IDs).length)} Creative IDs · ${D.integer(campaignCount)} Campaigns · ${esc(arr(row.Creative_Types).join(', ') || '-')}</p></section><section><h5>ข้อจำกัด</h5>${list(row.Limitations)}</section></div></details>
       </div>
+    </details>`;
+  }
 
-      <div class="weekly-kpis">
-        <div class="weekly-kpi"><span>Weekly Rank</span><strong>${rank} / ${peers}</strong></div>
-        <div class="weekly-kpi"><span>${esc(field(row, ['Main_Metric_Label'], 'Main Metric'))}</span><strong>${esc(metricValue(row))}</strong></div>
-        <div class="weekly-kpi"><span>Spend 7D</span><strong>฿${D.money(field(row, ['Spend']))}</strong></div>
-        <div class="weekly-kpi"><span>Results 7D</span><strong>${D.integer(field(row, ['Results']))}</strong></div>
-        <div class="weekly-kpi"><span>CTR</span><strong>${(D.num(field(row, ['CTR'])) * 100).toFixed(2)}%</strong></div>
-        <div class="weekly-kpi"><span>Active Days</span><strong>${D.integer(field(currentWindow, ['active_days']))}</strong></div>
-      </div>
-
-      <div class="weekly-recommendation"><div><strong>${esc(actionLabels[action] || action || 'Recommendation')}</strong><span>${esc(field(row, ['Recommendation'], '-'))}</span></div><span class="confidence">Confidence: ${esc(field(row, ['Confidence'], '-'))}</span></div>
-
-      <div class="weekly-grid">
-        <section class="weekly-section"><h4>เหตุผลจาก Performance</h4>${list(row.Reasons)}<h4 style="margin-top:14px">ความเสี่ยง</h4>${list(row.Risks)}</section>
-        <section class="weekly-section test-plan"><h4>Variation Test Plan</h4><dl><dt>Control</dt><dd>${esc(plan.control || '-')}</dd><dt>Hook</dt><dd>${esc(plan.hook || '-')}</dd><dt>Message</dt><dd>${esc(plan.message || '-')}</dd><dt>Visual</dt><dd>${esc(plan.visual || '-')}</dd><dt>CTA</dt><dd>${esc(plan.cta || '-')}</dd></dl></section>
-        <section class="weekly-section"><h4>Test Rule</h4><p>${esc(plan.test_rule || '-')}</p><h4 style="margin-top:14px">Creative Coverage</h4><p>${D.integer(arr(row.Creative_IDs).length)} Creative IDs · ${D.integer(arr(row.Campaign_Names).length)} Campaigns · ${esc(arr(row.Creative_Types).join(', ') || '-')}</p><h4 style="margin-top:14px">ข้อจำกัด</h4>${list(row.Limitations)}</section>
-      </div>
-    </article>`;
+  function renderDecisionGroup(decision, rows) {
+    const open = decision === 'WINNER' || (decisionOrder.find((key) => rows.some((row) => upper(field(row, ['Analyzer_Decision'])) === key)) === decision);
+    return `<details class="decision-group group-${decision}" ${open ? 'open' : ''}><summary><div><span class="decision-dot"></span><strong>${esc(labels[decision])}</strong><small>${esc(groupDescriptions[decision])}</small></div><b>${D.integer(rows.length)}</b></summary><div class="decision-content">${rows.map(renderCreative).join('')}</div></details>`;
   }
 
   function filteredRows() {
@@ -122,7 +188,13 @@
     $('loserCount').textContent = D.integer(counts.LOSER || 0);
     $('insufficientCount').textContent = D.integer(counts.INSUFFICIENT_DATA || 0);
     $('resultBadge').textContent = `${D.integer(rows.length)} creative groups`;
-    $('weeklyList').innerHTML = rows.length ? rows.map(renderCard).join('') : '<div class="empty">ไม่พบ Creative Group ตามตัวกรอง หรือ Cache Creative Weekly ยังไม่มีข้อมูล</div>';
+
+    const sections = decisionOrder.map((decision) => {
+      const groupRows = rows.filter((row) => upper(field(row, ['Analyzer_Decision'])) === decision);
+      return groupRows.length ? renderDecisionGroup(decision, groupRows) : '';
+    }).join('');
+
+    $('weeklyList').innerHTML = sections || '<div class="empty">ไม่พบ Creative Group ตามตัวกรอง หรือ Cache Creative Weekly ยังไม่มีข้อมูล</div>';
   }
 
   async function load(refresh = false) {

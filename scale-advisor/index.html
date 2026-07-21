@@ -1,77 +1,82 @@
 <!DOCTYPE html>
+
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scale Up Advisor | AI Marketing Copilot</title>
-  <meta name="description" content="Scale Up Advisor แนะนำ Campaign ที่มีโอกาสเพิ่มงบ พร้อม Risk, Metrics และ Guardrail จากข้อมูลจริง">
-  <link rel="stylesheet" href="../assets/css/app.css?v=5.0.0">
-  <link rel="stylesheet" href="../assets/css/product.css?v=5.0.0">
-  <link rel="stylesheet" href="../assets/css/scale-advisor.css?v=5.0.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scale Up Advisor | AI Marketing Copilot</title>
+<meta content="Scale Up Advisor แนะนำ Campaign ที่มีโอกาสเพิ่มงบ พร้อม Risk, Metrics และ Guardrail จากข้อมูลจริง" name="description"/>
+<link href="../assets/css/app.css?v=5.2.0" rel="stylesheet"/>
+<link href="../assets/css/product.css?v=5.0.0" rel="stylesheet"/>
+<link href="../assets/css/scale-advisor.css?v=5.0.0" rel="stylesheet"/>
 </head>
 <body>
-  <section id="loading" class="loading" aria-live="polite">
-    <div class="loading-spinner"></div>
-    <h2>กำลังเตรียม Scale Up Advisor</h2>
-    <p id="loadingMessage">กำลังอ่านคำแนะนำล่าสุดจาก Dashboard Cache...</p>
-  </section>
-
-  <div id="shell" class="shell hidden">
-    <aside class="sidebar">
-      <div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div>
-      <nav aria-label="Main navigation">
-        <a href="../dashboard/index.html"><span>Dashboard</span></a>
-        <a href="../campaign/index.html"><span>Campaign</span></a>
-        <a href="../creative/index.html"><span>Creative</span></a>
-        <a href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
-        <a class="active" href="./index.html"><span>Scale Advisor</span></a>
-        <a href="../ai-chat/index.html"><span>AI Chat</span></a><a href="../workspace/index.html"><span>My Workspace</span></a>
-      </nav>
-      <div class="sidebar-footer">Recommendation Only · No Auto Scale</div>
-    </aside>
-
-    <section class="main">
-      <header class="topbar">
-        <div class="topbar-title"><h1>Scale Up Advisor V2</h1><p>จัดลำดับ Campaign ที่มีโอกาสเพิ่มงบ พร้อม Risk, Monitoring Metrics และ Guardrail</p></div>
-        <div class="topbar-actions"><button id="refreshButton" class="button-primary" type="button">รีเฟรชข้อมูล</button><div class="user-box"><div class="user-meta"><strong id="displayName">-</strong><span id="role">-</span></div><button id="logoutButton" class="button-secondary" type="button">Logout</button></div></div>
-      </header>
-
-      <main class="content">
-        <section class="advisor-notice">
-          <div><strong>ระบบแนะนำเท่านั้น</strong><p>ระบบไม่แก้ Budget หรือ Ads อัตโนมัติ Campaign Status ยังคงมาจาก Scoring_Rules + Benchmark Percentiles</p></div>
-          <span id="dataDateBadge" class="panel-badge">Data: -</span>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header"><div><h2>ตัวกรอง</h2><p>เลือก Game, Account หรือคำแนะนำที่ต้องการตรวจ</p></div><span id="updatedAt" class="panel-badge">-</span></div>
-          <div class="panel-body"><div class="filters advisor-filters">
-            <div class="field"><label>ค้นหา Campaign</label><input id="searchFilter" placeholder="ชื่อ Campaign..."></div>
-            <div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
-            <div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
-            <div class="field"><label>Advisor Decision</label><select id="decisionFilter"><option value="">ทั้งหมด</option><option value="SCALE_READY">พร้อม Scale</option><option value="TEST_SCALE">ทดลอง Scale</option><option value="HOLD">Hold</option><option value="HOLD_REVIEW">Hold & Review</option><option value="DO_NOT_SCALE">ห้าม Scale</option><option value="INSUFFICIENT_DATA">ข้อมูลไม่พอ</option></select></div>
-          </div><div class="filter-actions" style="margin-top:12px"><button id="resetButton" class="button-secondary" type="button">รีเซ็ตตัวกรอง</button></div></div>
-        </section>
-
-        <section class="metrics advisor-metrics">
-          <article class="metric-card"><span>พร้อม Scale</span><strong id="scaleReadyCount">0</strong><small>ผ่าน Status, Confidence และ Main Metric</small></article>
-          <article class="metric-card"><span>ทดลอง Scale</span><strong id="testScaleCount">0</strong><small>เพิ่มงบ Step เล็กและติดตาม</small></article>
-          <article class="metric-card"><span>Hold / Review</span><strong id="holdCount">0</strong><small>ยังไม่ควรเพิ่มงบ</small></article>
-          <article class="metric-card"><span>ห้าม Scale</span><strong id="blockedCount">0</strong><small>CRITICAL หรือข้อมูลไม่พอ</small></article>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header"><div><h3>Scale Recommendation</h3><p>เรียงตามความพร้อมและหลักฐานจากข้อมูลล่าสุด</p></div><span id="resultBadge" class="panel-badge">0 campaigns</span></div>
-          <div id="advisorList" class="advisor-list panel-body"><div class="empty">รอโหลดข้อมูล</div></div>
-        </section>
-
-        <footer class="footer-note">AI Marketing Copilot · Scale Up Advisor V2 · Frontend V5.0.0</footer>
-      </main>
-    </section>
-  </div>
-
-  <script src="../assets/js/config.js?v=5.0.0"></script>
-  <script src="../assets/js/auth.js?v=5.0.0"></script>
-  <script src="../assets/js/product-data.js?v=5.0.0"></script>
-  <script src="../assets/js/scale-advisor.js?v=5.0.0"></script>
-</body>
+<section aria-live="polite" class="loading" id="loading">
+<div class="loading-spinner"></div>
+<h2>กำลังเตรียม Scale Up Advisor</h2>
+<p id="loadingMessage">กำลังอ่านคำแนะนำล่าสุดจาก Dashboard Cache...</p>
+</section>
+<div class="shell hidden" id="shell">
+<aside class="sidebar">
+<div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div>
+<nav aria-label="Main navigation" class="sidebar-nav">
+<a data-nav-page="dashboard" href="../dashboard/index.html"><span>Dashboard</span></a>
+<a data-nav-page="campaign" href="../campaign/index.html"><span>Campaign</span></a>
+<a data-nav-page="creative" href="../creative/index.html"><span>Creative</span></a>
+<a data-nav-page="creative-weekly" href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
+<a data-nav-page="scale-advisor" href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
+<a data-nav-page="ai-chat" href="../ai-chat/index.html"><span>AI Chat</span></a>
+<a data-nav-page="workspace" href="../workspace/index.html"><span>My Workspace</span></a>
+<div class="sidebar-nav-group" data-nav-group="data-management">
+<button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle" type="button">
+<span>Data Management</span>
+<span aria-hidden="true" class="sidebar-chevron">⌄</span>
+</button>
+<div class="sidebar-subnav" hidden="" id="dataManagementSubnav">
+<a data-workspace-view="health" href="../workspace/index.html?view=health"><span>Data Health</span></a>
+<a data-workspace-view="repair" href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
+<a data-workspace-view="activity" href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
+</div>
+</div>
+</nav>
+<div class="sidebar-footer">Recommendation Only · No Auto Scale</div>
+</aside>
+<section class="main">
+<header class="topbar">
+<div class="topbar-title"><h1>Scale Up Advisor V2</h1><p>จัดลำดับ Campaign ที่มีโอกาสเพิ่มงบ พร้อม Risk, Monitoring Metrics และ Guardrail</p></div>
+<div class="topbar-actions"><button class="button-primary" id="refreshButton" type="button">รีเฟรชข้อมูล</button><div class="user-box"><div class="user-meta"><strong id="displayName">-</strong><span id="role">-</span></div><button class="button-secondary" id="logoutButton" type="button">Logout</button></div></div>
+</header>
+<main class="content">
+<section class="advisor-notice">
+<div><strong>ระบบแนะนำเท่านั้น</strong><p>ระบบไม่แก้ Budget หรือ Ads อัตโนมัติ Campaign Status ยังคงมาจาก Scoring_Rules + Benchmark Percentiles</p></div>
+<span class="panel-badge" id="dataDateBadge">Data: -</span>
+</section>
+<section class="panel">
+<div class="panel-header"><div><h2>ตัวกรอง</h2><p>เลือก Game, Account หรือคำแนะนำที่ต้องการตรวจ</p></div><span class="panel-badge" id="updatedAt">-</span></div>
+<div class="panel-body"><div class="filters advisor-filters">
+<div class="field"><label>ค้นหา Campaign</label><input id="searchFilter" placeholder="ชื่อ Campaign..."/></div>
+<div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
+<div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+<div class="field"><label>Advisor Decision</label><select id="decisionFilter"><option value="">ทั้งหมด</option><option value="SCALE_READY">พร้อม Scale</option><option value="TEST_SCALE">ทดลอง Scale</option><option value="HOLD">Hold</option><option value="HOLD_REVIEW">Hold &amp; Review</option><option value="DO_NOT_SCALE">ห้าม Scale</option><option value="INSUFFICIENT_DATA">ข้อมูลไม่พอ</option></select></div>
+</div><div class="filter-actions" style="margin-top:12px"><button class="button-secondary" id="resetButton" type="button">รีเซ็ตตัวกรอง</button></div></div>
+</section>
+<section class="metrics advisor-metrics">
+<article class="metric-card"><span>พร้อม Scale</span><strong id="scaleReadyCount">0</strong><small>ผ่าน Status, Confidence และ Main Metric</small></article>
+<article class="metric-card"><span>ทดลอง Scale</span><strong id="testScaleCount">0</strong><small>เพิ่มงบ Step เล็กและติดตาม</small></article>
+<article class="metric-card"><span>Hold / Review</span><strong id="holdCount">0</strong><small>ยังไม่ควรเพิ่มงบ</small></article>
+<article class="metric-card"><span>ห้าม Scale</span><strong id="blockedCount">0</strong><small>CRITICAL หรือข้อมูลไม่พอ</small></article>
+</section>
+<section class="panel">
+<div class="panel-header"><div><h3>Scale Recommendation</h3><p>เรียงตามความพร้อมและหลักฐานจากข้อมูลล่าสุด</p></div><span class="panel-badge" id="resultBadge">0 campaigns</span></div>
+<div class="advisor-list panel-body" id="advisorList"><div class="empty">รอโหลดข้อมูล</div></div>
+</section>
+<footer class="footer-note">AI Marketing Copilot · Scale Up Advisor V2 · Frontend V5.0.0</footer>
+</main>
+</section>
+</div>
+<script src="../assets/js/config.js?v=5.0.0"></script>
+<script src="../assets/js/auth.js?v=5.0.0"></script>
+<script src="../assets/js/product-data.js?v=5.0.0"></script>
+<script src="../assets/js/scale-advisor.js?v=5.0.0"></script>
+<script src="../assets/js/sidebar.js?v=5.2.0"></script></body>
 </html>

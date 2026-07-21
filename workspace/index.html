@@ -1,197 +1,240 @@
 <!DOCTYPE html>
+
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Workspace | AI Marketing Copilot</title>
-  <link rel="stylesheet" href="../assets/css/app.css?v=5.1.0">
-  <link rel="stylesheet" href="../assets/css/product.css?v=5.1.0">
-  <link rel="stylesheet" href="../assets/css/workspace.css?v=5.1.0">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>My Workspace | AI Marketing Copilot</title>
+<link href="../assets/css/app.css?v=5.2.0" rel="stylesheet"/>
+<link href="../assets/css/product.css?v=5.2.0" rel="stylesheet"/>
+<link href="../assets/css/workspace.css?v=5.2.0" rel="stylesheet"/>
 </head>
 <body>
-  <section id="loading" class="loading" aria-live="polite">
-    <div class="loading-spinner"></div>
-    <h2>กำลังเปิด My Workspace</h2>
-    <p id="loadingMessage">กำลังตรวจสอบสิทธิ์และสุขภาพข้อมูล...</p>
-  </section>
+<section aria-live="polite" class="loading" id="loading">
+<div class="loading-spinner"></div>
+<h2>กำลังเปิด My Workspace</h2>
+<p id="loadingMessage">กำลังตรวจสอบสิทธิ์และสุขภาพข้อมูล...</p>
+</section>
+<div class="shell hidden" id="shell">
+<aside class="sidebar">
+<div class="sidebar-brand">
+<h2>AI Marketing Copilot</h2>
+<p>Marketing Intelligence Platform</p>
+</div>
+<nav aria-label="Main navigation" class="sidebar-nav">
+<a data-nav-page="dashboard" href="../dashboard/index.html"><span>Dashboard</span></a>
+<a data-nav-page="campaign" href="../campaign/index.html"><span>Campaign</span></a>
+<a data-nav-page="creative" href="../creative/index.html"><span>Creative</span></a>
+<a data-nav-page="creative-weekly" href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
+<a data-nav-page="scale-advisor" href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
+<a data-nav-page="ai-chat" href="../ai-chat/index.html"><span>AI Chat</span></a>
+<a data-nav-page="workspace" href="./index.html"><span>My Workspace</span></a>
+<div class="sidebar-nav-group" data-nav-group="data-management">
+<button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle" type="button">
+<span>Data Management</span>
+<span aria-hidden="true" class="sidebar-chevron">⌄</span>
+</button>
+<div class="sidebar-subnav" hidden="" id="dataManagementSubnav">
+<a data-workspace-view="health" href="./index.html?view=health"><span>Data Health</span></a>
+<a data-workspace-view="repair" href="./index.html?view=repair"><span>Data Repair</span></a>
+<a data-workspace-view="activity" href="./index.html?view=activity"><span>Repair Activity</span></a>
+</div>
+</div>
+</nav>
+<div class="sidebar-footer">Profile · Access · Data Management</div>
+</aside>
+<section class="main">
+<header class="topbar">
+<div class="topbar-title">
+<h1 id="workspacePageTitle">My Workspace</h1>
+<p id="workspacePageSubtitle">ข้อมูลผู้ใช้ สิทธิ์รายเกม และเครื่องมือดูแลข้อมูล</p>
+</div>
+<div class="topbar-actions">
+<button class="button-primary" id="refreshButton" type="button">รีเฟรชข้อมูล</button>
+<div class="user-box">
+<div class="user-meta">
+<strong id="displayName">-</strong>
+<span id="role">-</span>
+</div>
+<button class="button-secondary" id="logoutButton" type="button">Logout</button>
+</div>
+</div>
+</header>
+<main class="content workspace-content">
+<section class="workspace-hero panel" id="workspaceHero">
+<div>
+<span class="eyebrow">USER CONTROL CENTER</span>
+<h2 id="welcomeTitle">ยินดีต้อนรับ</h2>
+<p id="welcomeSubtitle">ระบบจะแสดงเฉพาะเกมและ Account ที่คุณมีสิทธิ์</p>
+</div>
+<span class="status-chip status-neutral" id="systemStatus">กำลังตรวจสอบ</span>
+</section>
+<nav aria-label="Workspace tabs" class="workspace-tabs" id="workspacePrimaryTabs">
+<button class="workspace-tab active" data-tab="profile" type="button">Profile</button>
+<button class="workspace-tab" data-tab="access" type="button">My Access</button>
 
-  <div id="shell" class="shell hidden">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <h2>AI Marketing Copilot</h2>
-        <p>Marketing Intelligence Platform</p>
-      </div>
-      <nav aria-label="Main navigation">
-        <a href="../dashboard/index.html"><span>Dashboard</span></a>
-        <a href="../campaign/index.html"><span>Campaign</span></a>
-        <a href="../creative/index.html"><span>Creative</span></a>
-        <a href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
-        <a href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
-        <a href="../ai-chat/index.html"><span>AI Chat</span></a>
-        <a class="active" href="./index.html"><span>My Workspace</span></a>
-      </nav>
-      <div class="sidebar-footer">User Access · Data Health · Repair Control</div>
-    </aside>
 
-    <section class="main">
-      <header class="topbar">
-        <div class="topbar-title">
-          <h1>My Workspace</h1>
-          <p>ข้อมูลผู้ใช้ สิทธิ์รายเกม และเครื่องมือดูแลข้อมูล</p>
-        </div>
-        <div class="topbar-actions">
-          <button id="refreshButton" class="button-primary" type="button">รีเฟรชข้อมูล</button>
-          <div class="user-box">
-            <div class="user-meta">
-              <strong id="displayName">-</strong>
-              <span id="role">-</span>
-            </div>
-            <button id="logoutButton" class="button-secondary" type="button">Logout</button>
-          </div>
-        </div>
-      </header>
 
-      <main class="content workspace-content">
-        <section class="workspace-hero panel">
-          <div>
-            <span class="eyebrow">USER CONTROL CENTER</span>
-            <h2 id="welcomeTitle">ยินดีต้อนรับ</h2>
-            <p id="welcomeSubtitle">ระบบจะแสดงเฉพาะเกมและ Account ที่คุณมีสิทธิ์</p>
-          </div>
-          <span id="systemStatus" class="status-chip status-neutral">กำลังตรวจสอบ</span>
-        </section>
-
-        <nav class="workspace-tabs" aria-label="Workspace tabs">
-          <button class="workspace-tab active" type="button" data-tab="profile">Profile</button>
-          <button class="workspace-tab" type="button" data-tab="access">My Access</button>
-          <button class="workspace-tab" type="button" data-tab="health">Data Health</button>
-          <button class="workspace-tab" type="button" data-tab="repair">Data Repair</button>
-          <button class="workspace-tab" type="button" data-tab="activity">Activity</button>
-        </nav>
-
-        <section class="workspace-section active" data-section="profile">
-          <div class="section-heading">
-            <div><h2>ข้อมูลส่วนตัว</h2><p>ข้อมูลจาก Users, Session และ Login History</p></div>
-          </div>
-          <div class="profile-grid">
-            <article class="panel profile-card profile-main-card">
-              <div class="profile-avatar" id="profileAvatar">U</div>
-              <div>
-                <h3 id="profileDisplayName">-</h3>
-                <p id="profileUsername">-</p>
-                <span id="profileRoleBadge" class="access-badge">-</span>
-              </div>
-            </article>
-            <article class="metric-card"><span>User ID</span><strong id="profileUserId">-</strong><small>รหัสผู้ใช้งานระบบ</small></article>
-            <article class="metric-card"><span>สถานะ</span><strong id="profileStatus">-</strong><small>สถานะบัญชีปัจจุบัน</small></article>
-            <article class="metric-card"><span>Last Login</span><strong id="profileLastLogin">-</strong><small>เวลาล่าสุดที่เข้าสู่ระบบ</small></article>
-            <article class="metric-card"><span>Session หมดอายุ</span><strong id="profileSessionExpiry">-</strong><small>เวลา Asia/Bangkok</small></article>
-          </div>
-        </section>
-
-        <section class="workspace-section" data-section="access">
-          <div class="section-heading">
-            <div><h2>สิทธิ์ที่ได้รับ</h2><p>สิทธิ์ถูกคำนวณจาก Role และ User_Access รายเกม / ราย Account</p></div>
-            <span id="accessCountBadge" class="panel-badge">0 Account</span>
-          </div>
-          <article class="panel">
-            <div class="table-wrap">
-              <table class="data-table workspace-table">
-                <thead><tr><th>Game</th><th>Account</th><th>Access Level</th><th>ดูข้อมูล</th><th>ซ่อมวันที่ขาด</th><th>Force Refresh</th></tr></thead>
-                <tbody id="accessTableBody"><tr><td colspan="6" class="empty">รอโหลดสิทธิ์</td></tr></tbody>
-              </table>
-            </div>
-          </article>
-        </section>
-
-        <section class="workspace-section" data-section="health">
-          <div class="section-heading">
-            <div><h2>Data Health</h2><p>ดูช่วงข้อมูล วันที่ขาด และเวลาที่ระบบอัปเดตล่าสุด</p></div>
-          </div>
-          <article class="panel health-filter-panel">
-            <div class="health-filters">
-              <div class="field"><label for="healthGame">Game</label><select id="healthGame"></select></div>
-              <div class="field"><label for="healthAccount">Account</label><select id="healthAccount"></select></div>
-            </div>
-          </article>
-          <div class="health-metrics">
-            <article class="metric-card"><span>Data From</span><strong id="healthFrom">-</strong><small>วันแรกที่ตรวจพบข้อมูล</small></article>
-            <article class="metric-card"><span>Data To</span><strong id="healthTo">-</strong><small>วันล่าสุดที่ตรวจพบข้อมูล</small></article>
-            <article class="metric-card"><span>Missing Days</span><strong id="healthMissingCount">0</strong><small>ไม่นับวันที่ Verified Zero</small></article>
-            <article class="metric-card"><span>Last Updated</span><strong id="healthUpdatedAt">-</strong><small>Data_Updated_At ล่าสุด</small></article>
-          </div>
-          <article class="panel">
-            <div class="panel-header"><div><h3>Coverage Summary</h3><p>วันที่สีแดงคือวันที่ยังไม่พบข้อมูลและยังไม่เคยยืนยันว่าเป็น Zero Delivery</p></div><span id="healthStatusBadge" class="status-chip status-neutral">UNKNOWN</span></div>
-            <div class="panel-body">
-              <div class="coverage-legend"><span><i class="legend-dot present"></i> มีข้อมูล</span><span><i class="legend-dot zero"></i> Verified Zero</span><span><i class="legend-dot missing"></i> ข้อมูลขาด</span></div>
-              <div id="missingDateList" class="date-chip-list"><span class="empty-inline">ยังไม่มีข้อมูล</span></div>
-            </div>
-          </article>
-        </section>
-
-        <section class="workspace-section" data-section="repair">
-          <div class="section-heading">
-            <div><h2>Data Repair Center</h2><p>Backend จะตรวจ Session, Role, Game และวันที่ซ้ำอีกครั้งก่อนเริ่มงาน</p></div>
-          </div>
-          <div class="repair-layout">
-            <article class="panel repair-form-panel">
-              <div class="panel-header"><div><h3>สร้างคำขอซ่อมข้อมูล</h3><p>Game Owner ซ่อมได้เฉพาะวันที่ขาด ส่วน Manager / Developer / Admin ใช้ Force Refresh ได้</p></div></div>
-              <div class="panel-body repair-form">
-                <div class="form-grid">
-                  <div class="field"><label for="repairGame">Game</label><select id="repairGame"></select></div>
-                  <div class="field"><label for="repairAccount">Account</label><select id="repairAccount"></select></div>
-                  <div class="field"><label for="repairStartDate">วันที่เริ่มต้น</label><input id="repairStartDate" type="date"></div>
-                  <div class="field"><label for="repairEndDate">วันที่สิ้นสุด</label><input id="repairEndDate" type="date"></div>
-                </div>
-                <label id="forceRefreshRow" class="force-row hidden"><input id="forceRefresh" type="checkbox"><span><strong>Force Refresh</strong><small>ดึงข้อมูลใหม่แม้วันที่นั้นมีข้อมูลอยู่แล้ว</small></span></label>
-                <div id="reasonRow" class="field hidden"><label for="repairReason">เหตุผลสำหรับ Force Refresh</label><textarea id="repairReason" rows="3" placeholder="เช่น Dashboard ไม่ตรงกับ Ads Manager หรือมีการเปลี่ยน Attribution Setting"></textarea></div>
-                <div class="repair-actions"><button id="previewRepairButton" class="button-secondary" type="button">Preview Data</button><button id="startRepairButton" class="button-primary" type="button" disabled>Start Repair</button></div>
-                <p id="repairMessage" class="form-message" aria-live="polite"></p>
-              </div>
-            </article>
-
-            <article class="panel repair-preview-panel">
-              <div class="panel-header"><div><h3>Repair Preview</h3><p>ตรวจสอบวันที่เดิม วันที่ขาด และสิทธิ์ก่อน Execute</p></div><span id="previewStatusBadge" class="status-chip status-neutral">รอ Preview</span></div>
-              <div class="panel-body">
-                <div class="preview-metrics">
-                  <article><span>วันที่ที่เลือก</span><strong id="previewSelectedCount">0</strong></article>
-                  <article><span>มีข้อมูลแล้ว</span><strong id="previewExistingCount">0</strong></article>
-                  <article><span>Verified Zero</span><strong id="previewZeroCount">0</strong></article>
-                  <article><span>วันที่ซ่อมได้</span><strong id="previewRepairCount">0</strong></article>
-                </div>
-                <div id="previewDetail" class="preview-detail"><p>เลือก Game, Account และช่วงวันที่ แล้วกด Preview Data</p></div>
-              </div>
-            </article>
-          </div>
-
-          <article id="repairProgressPanel" class="panel hidden">
-            <div class="panel-header"><div><h3>สถานะคำขอ</h3><p id="repairRequestId">-</p></div><span id="repairStatusBadge" class="status-chip status-running">QUEUED</span></div>
-            <div class="panel-body">
-              <div class="progress-track"><div id="repairProgressBar" class="progress-bar" style="width:10%"></div></div>
-              <p id="repairProgressMessage">ระบบรับคำขอแล้ว กำลังเตรียม Backfill</p>
-            </div>
-          </article>
-        </section>
-
-        <section class="workspace-section" data-section="activity">
-          <div class="section-heading"><div><h2>Activity History</h2><p>ประวัติการใช้ Tools และคำขอซ่อมข้อมูลของบัญชีนี้</p></div></div>
-          <article class="panel">
-            <div class="table-wrap">
-              <table class="data-table workspace-table">
-                <thead><tr><th>เวลา</th><th>Action</th><th>Module</th><th>Record</th><th>รายละเอียด</th></tr></thead>
-                <tbody id="activityTableBody"><tr><td colspan="5" class="empty">ยังไม่มีกิจกรรม</td></tr></tbody>
-              </table>
-            </div>
-          </article>
-        </section>
-
-        <footer class="footer-note">AI Marketing Copilot · User Control Center · Frontend V5.1.0</footer>
-      </main>
-    </section>
-  </div>
-
-  <script src="../assets/js/config.js?v=5.1.0"></script>
-  <script src="../assets/js/auth.js?v=5.1.0"></script>
-  <script src="../assets/js/workspace.js?v=5.1.0"></script>
-</body>
+</nav>
+<section class="workspace-section active" data-section="profile">
+<div class="section-heading">
+<div><h2>ข้อมูลส่วนตัว</h2><p>ข้อมูลจาก Users, Session และ Login History</p></div>
+</div>
+<div class="profile-grid">
+<article class="panel profile-card profile-main-card">
+<div class="profile-avatar" id="profileAvatar">U</div>
+<div>
+<h3 id="profileDisplayName">-</h3>
+<p id="profileUsername">-</p>
+<span class="access-badge" id="profileRoleBadge">-</span>
+</div>
+</article>
+<article class="metric-card"><span>User ID</span><strong id="profileUserId">-</strong><small>รหัสผู้ใช้งานระบบ</small></article>
+<article class="metric-card"><span>สถานะ</span><strong id="profileStatus">-</strong><small>สถานะบัญชีปัจจุบัน</small></article>
+<article class="metric-card"><span>Last Login</span><strong id="profileLastLogin">-</strong><small>เวลาล่าสุดที่เข้าสู่ระบบ</small></article>
+<article class="metric-card"><span>Session หมดอายุ</span><strong id="profileSessionExpiry">-</strong><small>เวลา Asia/Bangkok</small></article>
+</div>
+</section>
+<section class="workspace-section" data-section="access">
+<div class="section-heading">
+<div>
+<h2>สิทธิ์การใช้งานระบบ</h2>
+<p>แสดงสิทธิ์ทุกระดับ โดยสิทธิ์ที่คุณใช้งานอยู่จะแสดงเป็นสี ส่วนระดับอื่นจะแสดงเป็นสีเทา</p>
+</div>
+<span class="panel-badge" id="currentPermissionBadge">กำลังตรวจสอบ</span>
+</div>
+<article class="panel permission-matrix-panel">
+<div class="panel-header">
+<div>
+<h3>Permission Matrix</h3>
+<p>สิทธิ์จริงยังถูกตรวจซ้ำที่ Backend ตาม Role, Game และ Account ทุกครั้ง</p>
+</div>
+</div>
+<div class="table-wrap permission-matrix-wrap">
+<table class="data-table workspace-table permission-matrix">
+<thead>
+<tr>
+<th>Role / Access Level</th>
+<th>ขอบเขต</th>
+<th>ดูข้อมูล</th>
+<th>Data Health</th>
+<th>ซ่อมวันที่ขาด</th>
+<th>Force Refresh</th>
+</tr>
+</thead>
+<tbody id="permissionMatrixBody">
+<tr><td class="empty" colspan="6">รอโหลด Permission Matrix</td></tr>
+</tbody>
+</table>
+</div>
+</article>
+<div class="section-heading access-scope-heading">
+<div>
+<h2>Game และ Account ที่ได้รับมอบหมาย</h2>
+<p>ขอบเขตจริงที่บัญชีนี้สามารถเปิดดูหรือใช้ Data Tools ได้</p>
+</div>
+<span class="panel-badge" id="accessCountBadge">0 Account</span>
+</div>
+<article class="panel">
+<div class="table-wrap">
+<table class="data-table workspace-table">
+<thead>
+<tr>
+<th>Game</th>
+<th>Account</th>
+<th>Effective Level</th>
+<th>ดูข้อมูล</th>
+<th>ซ่อมวันที่ขาด</th>
+<th>Force Refresh</th>
+</tr>
+</thead>
+<tbody id="accessTableBody"><tr><td class="empty" colspan="6">รอโหลดสิทธิ์</td></tr></tbody>
+</table>
+</div>
+</article>
+</section>
+<section class="workspace-section" data-section="health">
+<div class="section-heading">
+<div><h2>Data Health</h2><p>ดูช่วงข้อมูล วันที่ขาด และเวลาที่ระบบอัปเดตล่าสุด</p></div>
+</div>
+<article class="panel health-filter-panel">
+<div class="health-filters">
+<div class="field"><label for="healthGame">Game</label><select id="healthGame"></select></div>
+<div class="field"><label for="healthAccount">Account</label><select id="healthAccount"></select></div>
+</div>
+</article>
+<div class="health-metrics">
+<article class="metric-card"><span>Data From</span><strong id="healthFrom">-</strong><small>วันแรกที่ตรวจพบข้อมูล</small></article>
+<article class="metric-card"><span>Data To</span><strong id="healthTo">-</strong><small>วันล่าสุดที่ตรวจพบข้อมูล</small></article>
+<article class="metric-card"><span>Missing Days</span><strong id="healthMissingCount">0</strong><small>ไม่นับวันที่ Verified Zero</small></article>
+<article class="metric-card"><span>Last Updated</span><strong id="healthUpdatedAt">-</strong><small>Data_Updated_At ล่าสุด</small></article>
+</div>
+<article class="panel">
+<div class="panel-header"><div><h3>Coverage Summary</h3><p>วันที่สีแดงคือวันที่ยังไม่พบข้อมูลและยังไม่เคยยืนยันว่าเป็น Zero Delivery</p></div><span class="status-chip status-neutral" id="healthStatusBadge">UNKNOWN</span></div>
+<div class="panel-body">
+<div class="coverage-legend"><span><i class="legend-dot present"></i> มีข้อมูล</span><span><i class="legend-dot zero"></i> Verified Zero</span><span><i class="legend-dot missing"></i> ข้อมูลขาด</span></div>
+<div class="date-chip-list" id="missingDateList"><span class="empty-inline">ยังไม่มีข้อมูล</span></div>
+</div>
+</article>
+</section>
+<section class="workspace-section" data-section="repair">
+<div class="section-heading">
+<div><h2>Data Repair Center</h2><p>Backend จะตรวจ Session, Role, Game และวันที่ซ้ำอีกครั้งก่อนเริ่มงาน</p></div>
+</div>
+<div class="repair-layout">
+<article class="panel repair-form-panel">
+<div class="panel-header"><div><h3>สร้างคำขอซ่อมข้อมูล</h3><p>Game Owner ซ่อมได้เฉพาะวันที่ขาด ส่วน Manager / Developer / Admin ใช้ Force Refresh ได้</p></div></div>
+<div class="panel-body repair-form">
+<div class="form-grid">
+<div class="field"><label for="repairGame">Game</label><select id="repairGame"></select></div>
+<div class="field"><label for="repairAccount">Account</label><select id="repairAccount"></select></div>
+<div class="field"><label for="repairStartDate">วันที่เริ่มต้น</label><input id="repairStartDate" type="date"/></div>
+<div class="field"><label for="repairEndDate">วันที่สิ้นสุด</label><input id="repairEndDate" type="date"/></div>
+</div>
+<label class="force-row hidden" id="forceRefreshRow"><input id="forceRefresh" type="checkbox"/><span><strong>Force Refresh</strong><small>ดึงข้อมูลใหม่แม้วันที่นั้นมีข้อมูลอยู่แล้ว</small></span></label>
+<div class="field hidden" id="reasonRow"><label for="repairReason">เหตุผลสำหรับ Force Refresh</label><textarea id="repairReason" placeholder="เช่น Dashboard ไม่ตรงกับ Ads Manager หรือมีการเปลี่ยน Attribution Setting" rows="3"></textarea></div>
+<div class="repair-actions"><button class="button-secondary" id="previewRepairButton" type="button">Preview Data</button><button class="button-primary" disabled="" id="startRepairButton" type="button">Start Repair</button></div>
+<p aria-live="polite" class="form-message" id="repairMessage"></p>
+</div>
+</article>
+<article class="panel repair-preview-panel">
+<div class="panel-header"><div><h3>Repair Preview</h3><p>ตรวจสอบวันที่เดิม วันที่ขาด และสิทธิ์ก่อน Execute</p></div><span class="status-chip status-neutral" id="previewStatusBadge">รอ Preview</span></div>
+<div class="panel-body">
+<div class="preview-metrics">
+<article><span>วันที่ที่เลือก</span><strong id="previewSelectedCount">0</strong></article>
+<article><span>มีข้อมูลแล้ว</span><strong id="previewExistingCount">0</strong></article>
+<article><span>Verified Zero</span><strong id="previewZeroCount">0</strong></article>
+<article><span>วันที่ซ่อมได้</span><strong id="previewRepairCount">0</strong></article>
+</div>
+<div class="preview-detail" id="previewDetail"><p>เลือก Game, Account และช่วงวันที่ แล้วกด Preview Data</p></div>
+</div>
+</article>
+</div>
+<article class="panel hidden" id="repairProgressPanel">
+<div class="panel-header"><div><h3>สถานะคำขอ</h3><p id="repairRequestId">-</p></div><span class="status-chip status-running" id="repairStatusBadge">QUEUED</span></div>
+<div class="panel-body">
+<div class="progress-track"><div class="progress-bar" id="repairProgressBar" style="width:10%"></div></div>
+<p id="repairProgressMessage">ระบบรับคำขอแล้ว กำลังเตรียม Backfill</p>
+</div>
+</article>
+</section>
+<section class="workspace-section" data-section="activity">
+<div class="section-heading"><div><h2>Activity History</h2><p>ประวัติการใช้ Tools และคำขอซ่อมข้อมูลของบัญชีนี้</p></div></div>
+<article class="panel">
+<div class="table-wrap">
+<table class="data-table workspace-table">
+<thead><tr><th>เวลา</th><th>Action</th><th>Module</th><th>Record</th><th>รายละเอียด</th></tr></thead>
+<tbody id="activityTableBody"><tr><td class="empty" colspan="5">ยังไม่มีกิจกรรม</td></tr></tbody>
+</table>
+</div>
+</article>
+</section>
+<footer class="footer-note">AI Marketing Copilot · User Control Center · Frontend V5.2.1</footer>
+</main>
+</section>
+</div>
+<script src="../assets/js/config.js?v=5.2.0"></script>
+<script src="../assets/js/auth.js?v=5.2.0"></script>
+<script src="../assets/js/workspace.js?v=5.2.0"></script>
+<script src="../assets/js/sidebar.js?v=5.2.0"></script></body>
 </html>

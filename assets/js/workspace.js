@@ -6,6 +6,10 @@
     preview: null,
     activeRequestId: '',
     pollTimer: null,
+    pollInFlight: false,
+    pollFailures: 0,
+    overviewLoading: false,
+    startingRepair: false,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -16,6 +20,51 @@
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
+
+  const VIEW_CONFIG = {
+    profile: {
+      title: 'My Workspace',
+      subtitle: 'ข้อมูลผู้ใช้และสิทธิ์การเข้าถึงระบบ',
+      primary: true,
+    },
+    access: {
+      title: 'My Workspace',
+      subtitle: 'ข้อมูลผู้ใช้และสิทธิ์การเข้าถึงระบบ',
+      primary: true,
+    },
+    health: {
+      title: 'Data Health',
+      subtitle: 'ตรวจสอบช่วงข้อมูล วันที่ขาด และเวลาที่อัปเดตล่าสุด',
+      primary: false,
+    },
+    repair: {
+      title: 'Data Repair',
+      subtitle: 'สร้างคำขอ Backfill ภายใต้สิทธิ์ Game และ Account',
+      primary: false,
+    },
+    activity: {
+      title: 'Repair Activity',
+      subtitle: 'ติดตามประวัติการใช้ Data Tools และสถานะคำขอ',
+      primary: false,
+    },
+  };
+
+  const PERMISSION_LEVELS = [
+    { key: 'VIEWER', label: 'Viewer', scope: 'เฉพาะ Game / Account ที่ได้รับมอบหมาย', view: true, health: true, repair: false, force: false },
+    { key: 'EDITOR', label: 'Editor', scope: 'เฉพาะ Game / Account ที่ได้รับมอบหมาย', view: true, health: true, repair: true, force: false },
+    { key: 'GAME_OWNER', label: 'Game Owner', scope: 'เฉพาะเกมและ Account ที่เป็นเจ้าของ', view: true, health: true, repair: true, force: false },
+    { key: 'MANAGER', label: 'Manager', scope: 'ทุก META Account ที่ Active', view: true, health: true, repair: true, force: true },
+    { key: 'DEVELOPER', label: 'Developer', scope: 'ทุก META Account ที่ Active', view: true, health: true, repair: true, force: true },
+    { key: 'ADMIN', label: 'Admin', scope: 'ทุก META Account ที่ Active', view: true, health: true, repair: true, force: true },
+  ];
+
+  const normalizePermissionLevel = (value) => {
+    const upper = clean(value).toUpperCase();
+    if (['OWNER', 'GAME OWNER'].includes(upper)) return 'GAME_OWNER';
+    if (upper === 'DEV') return 'DEVELOPER';
+    return upper;
+  };
 
   const formatDate = (value) => {
     const text = clean(value).slice(0, 10);
@@ -36,14 +85,28 @@
   };
 
   const request = async (payload) => {
-    const response = await fetch(window.APP_CONFIG.USER_CONTROL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_token: window.Auth.token(),
-        ...payload,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+
+    let response;
+    try {
+      response = await fetch(window.APP_CONFIG.USER_CONTROL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_token: window.Auth.token(),
+          ...payload,
+        }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw new Error('API ใช้เวลาตอบนานเกิน 60 วินาที');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     let data = null;
     try { data = await response.json(); } catch { data = null; }
@@ -53,8 +116,12 @@
       throw new Error('Session หมดอายุ');
     }
 
-    if (!response.ok || data?.success === false) {
-      throw new Error(data?.message || `User Control API Error (${response.status})`);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw new Error(`User Control API ไม่คืนข้อมูลที่ถูกต้อง (${response.status})`);
+    }
+
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || `User Control API Error (${response.status})`);
     }
 
     return data;
@@ -99,8 +166,8 @@
         else syncRepairPermissions();
       };
 
-      gameSelect.addEventListener('change', renderAccounts);
-      accountSelect.addEventListener('change', prefix === 'health' ? renderHealth : syncRepairPermissions);
+      gameSelect.onchange = renderAccounts;
+      accountSelect.onchange = prefix === 'health' ? renderHealth : syncRepairPermissions;
       renderAccounts();
     });
   };
@@ -123,6 +190,38 @@
 
   const renderAccess = () => {
     const rows = getAccess();
+    const profile = state.overview?.profile || {};
+    const activeLevels = new Set([
+      normalizePermissionLevel(profile.role),
+      ...rows.map((row) => normalizePermissionLevel(row.access_level)),
+    ].filter(Boolean));
+
+    const activeLabels = PERMISSION_LEVELS
+      .filter((level) => activeLevels.has(level.key))
+      .map((level) => level.label);
+
+    $('currentPermissionBadge').textContent = activeLabels.length
+      ? `Active: ${activeLabels.join(' + ')}`
+      : 'Active: Viewer';
+
+    $('permissionMatrixBody').innerHTML = PERMISSION_LEVELS.map((level) => {
+      const isCurrent = activeLevels.has(level.key);
+      const cell = (allowed) => `<td class="permission-cell ${allowed ? 'yes' : 'no'}">${allowed ? '✓' : '—'}</td>`;
+
+      return `
+        <tr class="${isCurrent ? 'permission-current' : 'permission-muted'}">
+          <td>
+            <span class="access-badge">${escapeHtml(level.label)}</span>
+            ${isCurrent ? '<span class="permission-current-label">สิทธิ์ของคุณ</span>' : ''}
+          </td>
+          <td class="permission-scope">${escapeHtml(level.scope)}</td>
+          ${cell(level.view)}
+          ${cell(level.health)}
+          ${cell(level.repair)}
+          ${cell(level.force)}
+        </tr>`;
+    }).join('');
+
     $('accessCountBadge').textContent = `${rows.length} Account`;
     $('accessTableBody').innerHTML = rows.length ? rows.map((row) => `
       <tr>
@@ -208,22 +307,32 @@
   };
 
   const startRepair = async () => {
+    if (state.startingRepair) return;
     if (!state.preview?.allowed) throw new Error('กรุณา Preview และแก้เงื่อนไขให้ผ่านก่อน');
-    const access = selectedAccess('repair');
-    const result = await request({
-      action: 'START_REPAIR',
-      game_id: access.game_id,
-      account_id: access.account_id,
-      start_date: $('repairStartDate').value,
-      end_date: $('repairEndDate').value,
-      force_refresh: $('forceRefresh').checked,
-      reason: $('repairReason').value,
-    });
-    state.activeRequestId = result.request_id;
-    $('repairProgressPanel').classList.remove('hidden');
-    $('repairRequestId').textContent = result.request_id;
-    updateRepairProgress(result.status || 'QUEUED', result.message || 'ระบบรับคำขอแล้ว');
-    startPolling();
+
+    state.startingRepair = true;
+    try {
+      const access = selectedAccess('repair');
+      const result = await request({
+        action: 'START_REPAIR',
+        game_id: access.game_id,
+        account_id: access.account_id,
+        start_date: $('repairStartDate').value,
+        end_date: $('repairEndDate').value,
+        force_refresh: $('forceRefresh').checked,
+        reason: $('repairReason').value,
+      });
+
+      if (!result.request_id) throw new Error('Backend ไม่คืน Request ID');
+      state.activeRequestId = result.request_id;
+      localStorage.setItem('active_repair_request_id', result.request_id);
+      $('repairProgressPanel').classList.remove('hidden');
+      $('repairRequestId').textContent = result.request_id;
+      updateRepairProgress(result.status || 'QUEUED', result.message || 'ระบบรับคำขอแล้ว');
+      startPolling();
+    } finally {
+      state.startingRepair = false;
+    }
   };
 
   const updateRepairProgress = (status, message) => {
@@ -234,50 +343,158 @@
     $('repairProgressMessage').textContent = message || upper;
   };
 
-  const startPolling = () => {
-    clearInterval(state.pollTimer);
-    const poll = async () => {
-      try {
-        const result = await request({ action: 'REPAIR_STATUS', request_id: state.activeRequestId });
-        const repair = result.repair_request || {};
-        updateRepairProgress(repair.status, repair.message || repair.error_message || `สถานะ: ${repair.status}`);
-        if (['COMPLETED', 'FAILED', 'REJECTED'].includes(clean(repair.status).toUpperCase())) {
-          clearInterval(state.pollTimer);
-          state.pollTimer = null;
-          await loadOverview(false);
-        }
-      } catch (error) {
-        $('repairProgressMessage').textContent = error.message;
+  const stopPolling = () => {
+    clearTimeout(state.pollTimer);
+    state.pollTimer = null;
+    state.pollInFlight = false;
+  };
+
+  const schedulePoll = (delayMs) => {
+    clearTimeout(state.pollTimer);
+    state.pollTimer = setTimeout(runRepairPoll, delayMs);
+  };
+
+  const runRepairPoll = async () => {
+    if (!state.activeRequestId || state.pollInFlight) return;
+
+    // Do not spend API quota while the tab is hidden.
+    if (document.hidden) {
+      schedulePoll(30000);
+      return;
+    }
+
+    state.pollInFlight = true;
+    try {
+      const result = await request({
+        action: 'REPAIR_STATUS',
+        request_id: state.activeRequestId,
+      });
+      const repair = result?.repair_request;
+      if (!repair || typeof repair !== 'object') {
+        throw new Error('Backend ไม่คืนสถานะคำขอ');
       }
-    };
-    poll();
-    state.pollTimer = setInterval(poll, 10000);
+
+      const status = clean(repair.status).toUpperCase();
+      updateRepairProgress(
+        status,
+        repair.message || repair.error_message || `สถานะ: ${status}`
+      );
+      state.pollFailures = 0;
+
+      if (['COMPLETED', 'FAILED', 'REJECTED'].includes(status)) {
+        stopPolling();
+        localStorage.removeItem('active_repair_request_id');
+        state.activeRequestId = '';
+
+        // Refresh the expensive Overview only once after the job is terminal.
+        setTimeout(() => {
+          loadOverview(false).catch((error) => {
+            $('repairProgressMessage').textContent =
+              `${repair.message || status} · กดรีเฟรชข้อมูลอีกครั้งภายหลัง (${error.message})`;
+          });
+        }, 5000);
+        return;
+      }
+
+      // One request at a time, every 30 seconds after the previous request ends.
+      schedulePoll(30000);
+    } catch (error) {
+      state.pollFailures += 1;
+      const delay = Math.min(30000 * (2 ** Math.min(state.pollFailures, 2)), 120000);
+      $('repairProgressMessage').textContent =
+        `${error.message} · ระบบจะลองใหม่ใน ${Math.round(delay / 1000)} วินาที`;
+
+      if (state.pollFailures >= 5) {
+        stopPolling();
+        $('repairProgressMessage').textContent =
+          `${error.message} · หยุดเช็กอัตโนมัติเพื่อป้องกัน API Limit งาน Backend อาจยังทำงานอยู่ กดรีเฟรชข้อมูลภายหลัง`;
+        return;
+      }
+      schedulePoll(delay);
+    } finally {
+      state.pollInFlight = false;
+    }
+  };
+
+  const startPolling = () => {
+    stopPolling();
+    state.pollFailures = 0;
+    schedulePoll(5000);
+  };
+
+  const routeViewFromUrl = () => {
+    const requested = clean(new URLSearchParams(window.location.search).get('view')).toLowerCase();
+    return VIEW_CONFIG[requested] ? requested : 'profile';
+  };
+
+  const activateView = (view, updateUrl = false) => {
+    const selectedView = VIEW_CONFIG[view] ? view : 'profile';
+    const config = VIEW_CONFIG[selectedView];
+
+    document.querySelectorAll('.workspace-section').forEach((section) => {
+      section.classList.toggle('active', section.dataset.section === selectedView);
+    });
+
+    document.querySelectorAll('.workspace-tab').forEach((button) => {
+      button.classList.toggle('active', button.dataset.tab === selectedView);
+    });
+
+    $('workspaceHero').classList.toggle('hidden', !config.primary);
+    $('workspacePrimaryTabs').classList.toggle('hidden', !config.primary);
+    $('workspacePageTitle').textContent = config.title;
+    $('workspacePageSubtitle').textContent = config.subtitle;
+
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      if (selectedView === 'profile') url.searchParams.delete('view');
+      else url.searchParams.set('view', selectedView);
+      history.pushState({ view: selectedView }, '', url);
+    }
   };
 
   const loadOverview = async (showLoading = true) => {
-    if (showLoading) {
-      $('loading').classList.remove('hidden');
-      $('shell').classList.add('hidden');
+    if (state.overviewLoading) return;
+    state.overviewLoading = true;
+    if ($('refreshButton')) $('refreshButton').disabled = true;
+
+    try {
+      if (showLoading) {
+        $('loading').classList.remove('hidden');
+        $('shell').classList.add('hidden');
+      }
+      const result = await request({ action: 'OVERVIEW' });
+      if (!result || typeof result !== 'object') {
+        throw new Error('Overview API ไม่คืนข้อมูล');
+      }
+      state.overview = result;
+      renderProfile();
+      renderAccess();
+      populateAccessSelects();
+      renderHealth();
+      renderActivity();
+      setStatusChip($('systemStatus'), result.system_status || 'READY');
+      $('loading').classList.add('hidden');
+      $('shell').classList.remove('hidden');
+
+      const savedRequestId = clean(localStorage.getItem('active_repair_request_id'));
+      if (savedRequestId && !state.activeRequestId) {
+        state.activeRequestId = savedRequestId;
+        $('repairProgressPanel').classList.remove('hidden');
+        $('repairRequestId').textContent = savedRequestId;
+        updateRepairProgress('RUNNING', 'กำลังตรวจสอบสถานะคำขอเดิม');
+        startPolling();
+      }
+    } finally {
+      state.overviewLoading = false;
+      if ($('refreshButton')) $('refreshButton').disabled = false;
     }
-    const result = await request({ action: 'OVERVIEW' });
-    state.overview = result;
-    renderProfile();
-    renderAccess();
-    populateAccessSelects();
-    renderHealth();
-    renderActivity();
-    setStatusChip($('systemStatus'), result.system_status || 'READY');
-    $('loading').classList.add('hidden');
-    $('shell').classList.remove('hidden');
   };
 
   const bindEvents = () => {
     document.querySelectorAll('.workspace-tab').forEach((button) => {
-      button.addEventListener('click', () => {
-        document.querySelectorAll('.workspace-tab').forEach((item) => item.classList.toggle('active', item === button));
-        document.querySelectorAll('.workspace-section').forEach((section) => section.classList.toggle('active', section.dataset.section === button.dataset.tab));
-      });
+      button.addEventListener('click', () => activateView(button.dataset.tab, true));
     });
+    window.addEventListener('popstate', () => activateView(routeViewFromUrl(), false));
     $('refreshButton').addEventListener('click', () => loadOverview(true).catch(showFatal));
     $('logoutButton').addEventListener('click', () => { window.Auth.clearDashboardCache(); window.Auth.clear(); location.replace('../index.html'); });
     $('forceRefresh').addEventListener('change', () => { $('reasonRow').classList.toggle('hidden', !$('forceRefresh').checked); state.preview = null; $('startRepairButton').disabled = true; });
@@ -296,6 +513,14 @@
     setTimeout(() => window.Auth.redirectToLogin(), 1800);
   };
 
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.activeRequestId && !state.pollTimer && !state.pollInFlight) {
+      schedulePoll(1000);
+    }
+  });
+
   bindEvents();
-  loadOverview(true).catch(showFatal);
+  activateView(routeViewFromUrl(), false);
+  loadOverview(true).then(() => activateView(routeViewFromUrl(), false)).catch(showFatal);
 })();

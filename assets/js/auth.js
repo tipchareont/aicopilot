@@ -30,6 +30,7 @@ window.Auth = (() => {
     'creative-weekly',
     'scale-advisor',
     'ai-chat',
+    'workspace',
   ]);
 
   let redirectInProgress = false;

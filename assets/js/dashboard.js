@@ -1,9 +1,9 @@
 'use strict';
 
-const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v9';
+const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v10';
 const MAX_PERSISTENT_CACHE_CHARS = 1000000;
 let memoryCache = null;
-const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v4';
+const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v5';
 const state = { response:null, rows:{account:[],campaign:[],creative:[],creativeGroup:[],aiSummary:[]}, days:'all', customFrom:'', customTo:'', filters:{game:'',account:'',objective:''}, trendMetric:'spend', pages:{campaign:1,creative:1}, pageSize:10, charts:{}, meta:{minTs:null,maxTs:null}, currentRange:null, filteredCache:{}, renderFrame:0, renderToken:0, summaryFilters:{campaign:{sort:'spend_desc',objective:''},creative:{sort:'spend_desc',objective:'',top:'10'}} };
 const el = (id) => document.getElementById(id);
 const text = (id,value) => { const node=el(id); if(node) node.textContent=value ?? '-'; };
@@ -30,6 +30,11 @@ function completeRegisterMetric(row){
   const completeTypes=['completeregistration','completedregistration','completeregister','completedregister','registrationcomplete','newregister'];
   if(completeTypes.includes(resultType)) return metric(row,'results');
   return !resultType && isConversionObjective(row) ? metric(row,'results') : 0;
+}
+function conversionSpendMetric(row){
+  const direct=field(row,['Conversion_Spend'],null);
+  if(direct!==null && direct!=='') return num(direct);
+  return isConversionObjective(row) ? metric(row,'spend') : 0;
 }
 function parseDate(value){
   if(!value) return null;
@@ -170,10 +175,10 @@ function filtered(type){
   return state.filteredCache[type];
 }
 function aggregate(rowsToSum){
-  const totals=rowsToSum.reduce((a,r)=>{ a.spend+=metric(r,'spend'); a.impressions+=metric(r,'impressions'); a.clicks+=metric(r,'clicks'); a.lpv+=metric(r,'lpv'); a.results+=metric(r,'results'); a.reach+=metric(r,'reach'); a.completeRegister+=completeRegisterMetric(r); return a; },{spend:0,impressions:0,clicks:0,lpv:0,results:0,reach:0,completeRegister:0});
-  totals.cpr=safeDivide(totals.spend,totals.results); totals.ctr=safeDivide(totals.clicks,totals.impressions)*100; totals.cplpv=safeDivide(totals.spend,totals.lpv); totals.cpcr=safeDivide(totals.spend,totals.completeRegister); return totals;
+  const totals=rowsToSum.reduce((a,r)=>{ a.spend+=metric(r,'spend'); a.impressions+=metric(r,'impressions'); a.clicks+=metric(r,'clicks'); a.lpv+=metric(r,'lpv'); a.results+=metric(r,'results'); a.reach+=metric(r,'reach'); a.completeRegister+=completeRegisterMetric(r); a.conversionSpend+=conversionSpendMetric(r); return a; },{spend:0,impressions:0,clicks:0,lpv:0,results:0,reach:0,completeRegister:0,conversionSpend:0});
+  totals.cpr=safeDivide(totals.spend,totals.results); totals.ctr=safeDivide(totals.clicks,totals.impressions)*100; totals.cplpv=safeDivide(totals.spend,totals.lpv); totals.cpcr=safeDivide(totals.conversionSpend,totals.completeRegister); return totals;
 }
-function aggregateConversion(rowsToSum){ return aggregate(rowsToSum.filter(isConversionObjective)); }
+function aggregateConversion(rowsToSum){ return aggregate(rowsToSum); }
 function accountMetricRows(){ const account=filtered('account'); return account.length?account:filtered('campaign'); }
 function previousRangeRows(){
   if(state.days==='all') return [];

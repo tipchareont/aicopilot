@@ -226,6 +226,84 @@
     ].filter(Boolean).join('\n');
   }
 
+  function extractAiAnswer(value) {
+    let current = value;
+
+    for (let depth = 0; depth < 6; depth++) {
+      if (Array.isArray(current)) {
+        current = current[0];
+        continue;
+      }
+
+      if (current && typeof current === 'object') {
+        if (current.answer !== undefined) {
+          current = current.answer;
+          continue;
+        }
+        if (current.body !== undefined) {
+          current = current.body;
+          continue;
+        }
+        if (current.data !== undefined) {
+          current = current.data;
+          continue;
+        }
+        break;
+      }
+
+      if (typeof current === 'string') {
+        const cleaned = current
+          .trim()
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim();
+
+        if (
+          (cleaned.startsWith('{') && cleaned.endsWith('}')) ||
+          (cleaned.startsWith('[') && cleaned.endsWith(']'))
+        ) {
+          try {
+            current = JSON.parse(cleaned);
+            continue;
+          } catch {}
+        }
+
+        return cleaned.replace(/\\n/g, '\n').trim();
+      }
+
+      break;
+    }
+
+    return typeof current === 'string'
+      ? current.trim()
+      : '';
+  }
+
+  function renderAiAnswer(value) {
+    const answer = extractAiAnswer(value);
+    if (!answer) return '<div>AI ไม่ได้ส่งตัวอย่างกลับมา</div>';
+
+    const lines = answer
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => !/^ตัวอย่าง\s+/i.test(line));
+
+    const examples = lines
+      .map((line) => line.replace(/^\d+[.)]\s*/, '').trim())
+      .filter(Boolean)
+      .slice(0, 2);
+
+    if (!examples.length) {
+      return `<p>${esc(answer)}</p>`;
+    }
+
+    return `<ol class="ai-example-list">${examples
+      .map((item) => `<li>${esc(item)}</li>`)
+      .join('')}</ol>`;
+  }
+
   async function generateExample(button) {
     const index = Number(button.dataset.rowIndex);
     const type = clean(button.dataset.exampleType);
@@ -275,7 +353,7 @@
       }
 
       target.className = 'ai-example-result is-ready';
-      target.textContent = clean(result.answer) || 'AI ไม่ได้ส่งตัวอย่างกลับมา';
+      target.innerHTML = renderAiAnswer(result);
       button.textContent = '✨ สร้างตัวอย่างใหม่อีกครั้ง';
     } catch (error) {
       if (Number(error.httpStatus) === 401) return window.Auth?.redirectToLogin?.();

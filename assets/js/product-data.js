@@ -1,7 +1,7 @@
 'use strict';
 
 window.CopilotData = (() => {
-  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v9';
+  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v10';
   const MAX_PERSISTENT_CACHE_CHARS = 1000000;
   let memoryCache = null;
 
@@ -34,13 +34,13 @@ window.CopilotData = (() => {
     try {
       serialized = JSON.stringify(cache);
     } catch (error) {
-      console.warn('[AI Marketing Copilot v4.9.1] ไม่สามารถแปลง Dashboard Cache ได้', error);
+      console.warn('[AI Marketing Copilot v4.9.2] ไม่สามารถแปลง Dashboard Cache ได้', error);
       return false;
     }
 
     if (serialized.length > MAX_PERSISTENT_CACHE_CHARS) {
       cleanupDashboardCaches({ keepCurrent: false });
-      console.info(`[AI Marketing Copilot v4.9.1] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
+      console.info(`[AI Marketing Copilot v4.9.2] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
       return false;
     }
 
@@ -50,7 +50,7 @@ window.CopilotData = (() => {
       return true;
     } catch (error) {
       cleanupDashboardCaches({ keepCurrent: false });
-      console.warn('[AI Marketing Copilot v4.9.1] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง', error);
+      console.warn('[AI Marketing Copilot v4.9.2] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง', error);
       return false;
     }
   }
@@ -124,7 +124,7 @@ window.CopilotData = (() => {
     } catch (error) {
       const cached = readCache();
       if (cached?.dashboard) {
-        console.warn('[AI Marketing Copilot v4.9.1] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม', error);
+        console.warn('[AI Marketing Copilot v4.9.2] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม', error);
         return cached;
       }
       throw error;

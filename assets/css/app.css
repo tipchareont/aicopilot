@@ -2,3 +2,15 @@
 
 /* Sidebar extensible navigation V5.2.0 */
 .sidebar-nav{display:grid;gap:8px;margin-top:28px}.sidebar-nav>a,.sidebar-subnav a{padding:12px 14px;border-radius:10px;color:#d1d5db;text-decoration:none;display:flex;justify-content:space-between;align-items:center}.sidebar-nav>a.active{background:#fff;color:#111827;font-weight:700}.sidebar-nav-group{display:grid;gap:6px}.sidebar-nav-toggle{width:100%;border:0;background:transparent;color:#d1d5db;padding:12px 14px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;font-weight:700;cursor:pointer;text-align:left}.sidebar-nav-toggle:hover,.sidebar-nav-group.active>.sidebar-nav-toggle{background:rgba(255,255,255,.08);color:#fff}.sidebar-chevron{font-size:18px;line-height:1;transition:transform .2s ease}.sidebar-nav-group.expanded .sidebar-chevron{transform:rotate(180deg)}.sidebar-subnav{display:grid;gap:5px;padding-left:12px}.sidebar-subnav[hidden]{display:none}.sidebar-subnav a{position:relative;padding:10px 12px 10px 22px;font-size:13px;color:#9ca3af}.sidebar-subnav a::before{content:"";position:absolute;left:8px;top:50%;width:5px;height:5px;border-radius:999px;background:#64748b;transform:translateY(-50%)}.sidebar-subnav a:hover{color:#fff;background:rgba(255,255,255,.06)}.sidebar-subnav a.active{background:#fff;color:#111827;font-weight:800}.sidebar-subnav a.active::before{background:#2563eb}.sidebar nav.sidebar-nav{display:grid;gap:8px;margin-top:28px}.sidebar nav.sidebar-nav a{padding:12px 14px}.sidebar nav.sidebar-nav .sidebar-subnav a{padding:10px 12px 10px 22px}
+
+
+/* Workspace nested navigation V5.3.0 */
+.sidebar-workspace-group>.sidebar-nav-toggle{font-weight:700}
+.sidebar-workspace-subnav{padding-left:10px;border-left:1px solid rgba(148,163,184,.22);margin-left:12px}
+.sidebar-nav-nested{gap:4px}
+.sidebar-nav-toggle-nested{padding:9px 12px 9px 20px;font-size:13px;color:#9ca3af;font-weight:700}
+.sidebar-nav-toggle-nested:before{content:"";width:5px;height:5px;border-radius:999px;background:#64748b;flex:0 0 auto}
+.sidebar-nav-toggle-nested>span:first-of-type{flex:1}
+.sidebar-subnav-nested{padding-left:14px}
+.sidebar-subnav-nested a{padding:9px 10px 9px 20px!important;font-size:12px!important}
+.sidebar-nav-nested.active>.sidebar-nav-toggle-nested{color:#fff;background:rgba(255,255,255,.06)}

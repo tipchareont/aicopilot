@@ -79,7 +79,7 @@ window.Auth = (() => {
 
   const clearDashboardCache = () => {
     for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('ai_marketing_copilot_dashboard_cache_')) {
+      if (key.startsWith('ai_marketing_copilot_dashboard_cache_') || key.startsWith('ai_marketing_copilot_workspace_cache_')) {
         localStorage.removeItem(key);
       }
     }

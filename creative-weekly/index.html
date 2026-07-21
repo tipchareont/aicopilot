@@ -6,7 +6,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Creative Weekly Analyzer | AI Marketing Copilot</title>
 <meta content="วิเคราะห์ Creative Group รายสัปดาห์จาก Performance จริง พร้อม Winner, Loser และแนวทางสร้าง Variation" name="description"/>
-<link href="../assets/css/app.css?v=5.2.0" rel="stylesheet"/>
+<link href="../assets/css/app.css?v=5.3.0" rel="stylesheet"/>
 <link href="../assets/css/product.css?v=5.0.0" rel="stylesheet"/>
 <link href="../assets/css/creative-weekly.css?v=5.0.0" rel="stylesheet"/>
 </head>
@@ -26,16 +26,24 @@
 <a data-nav-page="creative-weekly" href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
 <a data-nav-page="scale-advisor" href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
 <a data-nav-page="ai-chat" href="../ai-chat/index.html"><span>AI Chat</span></a>
-<a data-nav-page="workspace" href="../workspace/index.html"><span>My Workspace</span></a>
-<div class="sidebar-nav-group" data-nav-group="data-management">
-<button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle" type="button">
+<div class="sidebar-nav-group sidebar-workspace-group" data-nav-group="workspace">
+<button aria-controls="workspaceSubnav" aria-expanded="false" class="sidebar-nav-toggle" type="button">
+<span>My Workspace</span>
+<span aria-hidden="true" class="sidebar-chevron">⌄</span>
+</button>
+<div class="sidebar-subnav sidebar-workspace-subnav" hidden id="workspaceSubnav">
+<a data-nav-page="workspace" href="../workspace/index.html"><span>Profile &amp; My Access</span></a>
+<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management">
+<button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button">
 <span>Data Management</span>
 <span aria-hidden="true" class="sidebar-chevron">⌄</span>
 </button>
-<div class="sidebar-subnav" hidden="" id="dataManagementSubnav">
+<div class="sidebar-subnav sidebar-subnav-nested" hidden id="dataManagementSubnav">
 <a data-workspace-view="health" href="../workspace/index.html?view=health"><span>Data Health</span></a>
 <a data-workspace-view="repair" href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
 <a data-workspace-view="activity" href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
+</div>
+</div>
 </div>
 </div>
 </nav>
@@ -80,5 +88,5 @@
 <script src="../assets/js/auth.js?v=5.0.0"></script>
 <script src="../assets/js/product-data.js?v=5.0.0"></script>
 <script src="../assets/js/creative-weekly.js?v=5.0.0"></script>
-<script src="../assets/js/sidebar.js?v=5.2.0"></script></body>
+<script src="../assets/js/sidebar.js?v=5.3.0"></script></body>
 </html>

@@ -17,6 +17,7 @@
 
   const dataViews = new Set(['health', 'repair', 'activity']);
   const isDataView = page === 'workspace' && dataViews.has(view);
+  const isWorkspace = page === 'workspace';
 
   document.querySelectorAll('[data-nav-page]').forEach((link) => {
     const active = link.dataset.navPage === page && !(page === 'workspace' && isDataView);
@@ -32,21 +33,33 @@
     else link.removeAttribute('aria-current');
   });
 
-  const group = document.querySelector('[data-nav-group="data-management"]');
-  const toggle = group?.querySelector('.sidebar-nav-toggle');
-  const subnav = group?.querySelector('.sidebar-subnav');
+  const workspaceGroup = document.querySelector('[data-nav-group="workspace"]');
+  const workspaceToggle = workspaceGroup?.querySelector(':scope > .sidebar-nav-toggle');
+  const workspaceSubnav = workspaceGroup?.querySelector(':scope > .sidebar-subnav');
+  const dataGroup = workspaceGroup?.querySelector('[data-nav-group="data-management"]');
+  const dataToggle = dataGroup?.querySelector(':scope > .sidebar-nav-toggle');
+  const dataSubnav = dataGroup?.querySelector(':scope > .sidebar-subnav');
 
-  const setExpanded = (expanded) => {
+  const setGroup = (group, toggle, subnav, expanded, active = false) => {
     if (!group || !toggle || !subnav) return;
     group.classList.toggle('expanded', expanded);
-    group.classList.toggle('active', isDataView);
+    group.classList.toggle('active', active);
     toggle.setAttribute('aria-expanded', String(expanded));
     subnav.hidden = !expanded;
   };
 
-  setExpanded(isDataView);
+  setGroup(workspaceGroup, workspaceToggle, workspaceSubnav, isWorkspace, isWorkspace);
+  setGroup(dataGroup, dataToggle, dataSubnav, isDataView, isDataView);
 
-  toggle?.addEventListener('click', () => {
-    setExpanded(toggle.getAttribute('aria-expanded') !== 'true');
+  workspaceToggle?.addEventListener('click', () => {
+    const next = workspaceToggle.getAttribute('aria-expanded') !== 'true';
+    setGroup(workspaceGroup, workspaceToggle, workspaceSubnav, next, isWorkspace);
+    if (!next) setGroup(dataGroup, dataToggle, dataSubnav, false, isDataView);
+  });
+
+  dataToggle?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const next = dataToggle.getAttribute('aria-expanded') !== 'true';
+    setGroup(dataGroup, dataToggle, dataSubnav, next, isDataView);
   });
 })();

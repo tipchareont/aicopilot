@@ -12,3 +12,9 @@
 .workspace-table td,.workspace-table th{white-space:nowrap}.permission-yes{color:#16794a;font-weight:800}.permission-no{color:#94a3b8}.hidden{display:none!important}
 @media(max-width:1200px){.profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-main-card{grid-column:1/-1}.repair-layout{grid-template-columns:1fr}}
 @media(max-width:760px){.workspace-hero,.section-heading{align-items:flex-start;flex-direction:column}.profile-grid,.health-metrics,.health-filters,.form-grid{grid-template-columns:1fr}.workspace-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.repair-actions{flex-direction:column}.repair-actions button{width:100%}}
+
+
+/* Fast Workspace V5.3.0 */
+.workspace-sync-note{font-size:12px;color:#64748b}
+.workspace-section.is-loading{opacity:.72;pointer-events:none}
+.workspace-section.is-loading:after{content:"กำลังโหลดข้อมูลส่วนนี้...";display:block;padding:18px;text-align:center;color:#64748b;background:#fff;border:1px dashed #cbd5e1;border-radius:12px}

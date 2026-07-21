@@ -148,7 +148,7 @@
         <div class="creative-hero compact-mode">
           <div class="hero-content full-width">
             ${renderActionFocus(row)}
-            <div class="quick-facts"><span>Momentum <b class="momentum-text momentum-${esc(momentum)}">${esc(momentumLabels[momentum] || momentum)}</b></span><span>Confidence <b>${esc(field(row, ['Confidence'], '-'))}</b></span><span>Active Days <b>${D.integer(field(currentWindow, ['active_days']))}</b></span><span>Campaigns <b>${D.integer(campaignCount)}</b></span><span>Complete Register <b>${isConversion ? D.integer(completeRegister) : '-'}</b></span><span>Cost / Complete Register <b>${isConversion && completeRegister ? `฿${D.money(cpcr)}` : '-'}</b></span></div>
+            <div class="quick-facts"><span>Momentum <b class="momentum-text momentum-${esc(momentum)}">${esc(momentumLabels[momentum] || momentum)}</b></span><span>Confidence <b>${esc(field(row, ['Confidence'], '-'))}</b></span><span>Active Days <b>${D.integer(field(currentWindow, ['active_days']))}</b></span><span>Campaigns <b>${D.integer(campaignCount)}</b></span><span>Complete Register <b>${completeRegister ? D.integer(completeRegister) : '-'}</b></span><span>Cost / Complete Register <b>${completeRegister ? `฿${D.money(cpcr)}` : '-'}</b></span></div>
             <div class="simple-note">${esc(shortSummary(row))}</div>
           </div>
         </div>

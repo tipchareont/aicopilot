@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v10';
+const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v11';
 const MAX_PERSISTENT_CACHE_CHARS = 1000000;
 let memoryCache = null;
 const FILTER_KEY='ai_marketing_copilot_dashboard_filters_v5';
@@ -35,6 +35,11 @@ function conversionSpendMetric(row){
   const direct=field(row,['Conversion_Spend'],null);
   if(direct!==null && direct!=='') return num(direct);
   return isConversionObjective(row) ? metric(row,'spend') : 0;
+}
+function conversionCompleteRegisterMetric(row){
+  const direct=field(row,['Conversion_Complete_Register'],null);
+  if(direct!==null && direct!=='') return num(direct);
+  return isConversionObjective(row) ? completeRegisterMetric(row) : 0;
 }
 function parseDate(value){
   if(!value) return null;
@@ -175,10 +180,10 @@ function filtered(type){
   return state.filteredCache[type];
 }
 function aggregate(rowsToSum){
-  const totals=rowsToSum.reduce((a,r)=>{ a.spend+=metric(r,'spend'); a.impressions+=metric(r,'impressions'); a.clicks+=metric(r,'clicks'); a.lpv+=metric(r,'lpv'); a.results+=metric(r,'results'); a.reach+=metric(r,'reach'); a.completeRegister+=completeRegisterMetric(r); a.conversionSpend+=conversionSpendMetric(r); return a; },{spend:0,impressions:0,clicks:0,lpv:0,results:0,reach:0,completeRegister:0,conversionSpend:0});
-  totals.cpr=safeDivide(totals.spend,totals.results); totals.ctr=safeDivide(totals.clicks,totals.impressions)*100; totals.cplpv=safeDivide(totals.spend,totals.lpv); totals.cpcr=safeDivide(totals.conversionSpend,totals.completeRegister); return totals;
+  const totals=rowsToSum.reduce((a,r)=>{ a.spend+=metric(r,'spend'); a.impressions+=metric(r,'impressions'); a.clicks+=metric(r,'clicks'); a.lpv+=metric(r,'lpv'); a.results+=metric(r,'results'); a.reach+=metric(r,'reach'); a.completeRegister+=completeRegisterMetric(r); a.conversionSpend+=conversionSpendMetric(r); a.conversionCompleteRegister+=conversionCompleteRegisterMetric(r); return a; },{spend:0,impressions:0,clicks:0,lpv:0,results:0,reach:0,completeRegister:0,conversionSpend:0,conversionCompleteRegister:0});
+  totals.cpr=safeDivide(totals.spend,totals.results); totals.ctr=safeDivide(totals.clicks,totals.impressions)*100; totals.cplpv=safeDivide(totals.spend,totals.lpv); totals.cpcr=safeDivide(totals.spend,totals.completeRegister); totals.conversionCpcr=safeDivide(totals.conversionSpend,totals.conversionCompleteRegister); return totals;
 }
-function aggregateConversion(rowsToSum){ return aggregate(rowsToSum); }
+function aggregateConversion(rowsToSum){ const totals=aggregate(rowsToSum); return {spend:totals.conversionSpend,completeRegister:totals.conversionCompleteRegister,cpcr:totals.conversionCpcr}; }
 function accountMetricRows(){ const account=filtered('account'); return account.length?account:filtered('campaign'); }
 function previousRangeRows(){
   if(state.days==='all') return [];
@@ -206,15 +211,15 @@ function previousRangeRows(){
 function setDelta(id,current,previous,lowerBetter=false){ const node=el(id); if(!node) return; if(!previous){ node.textContent='ไม่มีช่วงเทียบ'; node.className='kpi-delta neutral'; return; } const change=((current-previous)/Math.abs(previous))*100; node.textContent=`${change>=0?'+':''}${change.toFixed(1)}%`; const good=lowerBetter?change<0:change>0; node.className=`kpi-delta ${Math.abs(change)<0.1?'neutral':good?'positive':'negative'}`; }
 function renderKpis(){
   const totals=aggregate(accountMetricRows()); const prev=aggregate(previousRangeRows()); const conversionTotals=aggregateConversion(accountMetricRows()); const prevConversion=aggregateConversion(previousRangeRows());
-  text('spendKpi',`฿${money(totals.spend)}`); text('resultsKpi',integer(conversionTotals.completeRegister)); text('cprKpi',`฿${money(conversionTotals.cpcr)}`); text('ctrKpi',percent(totals.ctr)); text('clicksKpi',integer(totals.clicks)); text('lpvKpi',integer(totals.lpv)); text('cplpvKpi',`฿${money(totals.cplpv)}`); text('impressionsKpi',integer(totals.impressions));
-  setDelta('spendDelta',totals.spend,prev.spend,false); setDelta('resultsDelta',conversionTotals.completeRegister,prevConversion.completeRegister,false); setDelta('cprDelta',conversionTotals.cpcr,prevConversion.cpcr,true); setDelta('ctrDelta',totals.ctr,prev.ctr,false);
+  text('spendKpi',`฿${money(totals.spend)}`); text('resultsKpi',integer(totals.completeRegister)); text('cprKpi',`฿${money(totals.cpcr)}`); text('conversionResultsKpi',integer(conversionTotals.completeRegister)); text('conversionCprKpi',`฿${money(conversionTotals.cpcr)}`); text('ctrKpi',percent(totals.ctr)); text('clicksKpi',integer(totals.clicks)); text('lpvKpi',integer(totals.lpv)); text('cplpvKpi',`฿${money(totals.cplpv)}`); text('impressionsKpi',integer(totals.impressions));
+  setDelta('spendDelta',totals.spend,prev.spend,false); setDelta('resultsDelta',totals.completeRegister,prev.completeRegister,false); setDelta('cprDelta',totals.cpcr,prev.cpcr,true); setDelta('conversionResultsDelta',conversionTotals.completeRegister,prevConversion.completeRegister,false); setDelta('conversionCprDelta',conversionTotals.cpcr,prevConversion.cpcr,true); setDelta('ctrDelta',totals.ctr,prev.ctr,false);
 }
 function byDate(rowsToGroup){ const map=new Map(); for(const r of rowsToGroup){ const key=dateKey(field(r,['Date','Data_Date','date'])) || 'ไม่ระบุวันที่'; if(!map.has(key)) map.set(key,[]); map.get(key).push(r); } return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,list])=>({date,...aggregate(list)})); }
 function destroyChart(name){ state.charts[name]?.destroy?.(); }
 function chartAvailable(){ return typeof Chart !== 'undefined'; }
 function renderTrend(){
   const series=byDate(accountMetricRows()); text('trendBadge',state.days==='all'?'ย้อนหลังทั้งหมด':state.days==='custom'?'กำหนดเอง':`${state.days} วัน`); if(!chartAvailable()) return;
-  const config={spend:{label:'Spend',suffix:'฿',value:x=>x.spend},results:{label:'Complete Register',suffix:'',value:x=>x.completeRegister},cpr:{label:'Cost / Complete Register',suffix:'฿',value:x=>x.cpcr},ctr:{label:'CTR',suffix:'%',value:x=>x.ctr},clicks:{label:'Clicks',suffix:'',value:x=>x.clicks},lpv:{label:'LPV',suffix:'',value:x=>x.lpv},impressions:{label:'Impressions',suffix:'',value:x=>x.impressions}}[state.trendMetric] || {label:'Spend',suffix:'฿',value:x=>x.spend};
+  const config={spend:{label:'Spend',suffix:'฿',value:x=>x.spend},results:{label:'Complete Register ทั้งหมด',suffix:'',value:x=>x.completeRegister},cpr:{label:'Blended Cost / Complete Register',suffix:'฿',value:x=>x.cpcr},conversionResults:{label:'Conversion Complete Register',suffix:'',value:x=>x.conversionCompleteRegister},conversionCpr:{label:'Conversion Cost / Complete Register',suffix:'฿',value:x=>x.conversionCpcr},ctr:{label:'CTR',suffix:'%',value:x=>x.ctr},clicks:{label:'Clicks',suffix:'',value:x=>x.clicks},lpv:{label:'LPV',suffix:'',value:x=>x.lpv},impressions:{label:'Impressions',suffix:'',value:x=>x.impressions}}[state.trendMetric] || {label:'Spend',suffix:'฿',value:x=>x.spend};
   destroyChart('trend'); state.charts.trend=new Chart(el('trendChart'),{type:'line',data:{labels:series.map(x=>x.date),datasets:[{label:config.label,data:series.map(config.value),fill:false,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>`${config.label}: ${config.suffix}${new Intl.NumberFormat('th-TH',{maximumFractionDigits:2}).format(ctx.parsed.y)}`}}},scales:{y:{beginAtZero:true}}}});
 }
 function groupMetric(rowsToGroup,keyNames,metricName){ const map=new Map(); for(const r of rowsToGroup){ const key=typeof keyNames==='function'?String(keyNames(r) || 'ไม่ระบุ'):String(field(r,keyNames,'ไม่ระบุ')); map.set(key,(map.get(key)||0)+metric(r,metricName)); } return [...map.entries()].sort((a,b)=>b[1]-a[1]); }

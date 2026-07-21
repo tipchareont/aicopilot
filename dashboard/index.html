@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | AI Marketing Copilot</title>
   <meta name="description" content="AI Marketing Copilot Dashboard สำหรับตรวจสอบและตัดสินใจจากข้อมูล Meta Ads">
-  <link rel="stylesheet" href="../assets/css/app.css?v=4.9.2">
+  <link rel="stylesheet" href="../assets/css/app.css?v=5.0.0">
   <style>
     :root{--bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;--primary:#2563eb;--primary-soft:#eff6ff;--success:#15803d;--success-soft:#f0fdf4;--warning:#b45309;--warning-soft:#fffbeb;--danger:#b91c1c;--danger-soft:#fef2f2;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px}
     *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}.hidden{display:none!important}
@@ -97,7 +97,7 @@
         <section class="kpi-grid" aria-label="Performance KPIs">
           <article class="kpi-card"><div class="kpi-label"><span>Spend</span><span id="spendDelta" class="kpi-delta neutral">-</span></div><strong id="spendKpi">-</strong><span class="kpi-sub">ยอดใช้จ่ายรวม</span></article>
           <article class="kpi-card"><div class="kpi-label"><span>Complete Register</span><span id="resultsDelta" class="kpi-delta neutral">-</span></div><strong id="resultsKpi">-</strong><span class="kpi-sub">จำนวนลงทะเบียนสำเร็จ</span></article>
-          <article class="kpi-card"><div class="kpi-label"><span>Cost / Complete Register</span><span id="cprDelta" class="kpi-delta neutral">-</span></div><strong id="cprKpi">-</strong><span class="kpi-sub">Spend ÷ Complete Register</span></article>
+          <article class="kpi-card"><div class="kpi-label"><span>Blended Cost / Complete Register</span><span id="cprDelta" class="kpi-delta neutral">-</span></div><strong id="cprKpi">-</strong><span class="kpi-sub">Spend ทุก Objective ÷ Register ทั้งหมด</span></article><article class="kpi-card"><div class="kpi-label"><span>Conversion Complete Register</span><span id="conversionResultsDelta" class="kpi-delta neutral">-</span></div><strong id="conversionResultsKpi">-</strong><span class="kpi-sub">เฉพาะ Objective Conversion</span></article><article class="kpi-card"><div class="kpi-label"><span>Conversion Cost / Complete Register</span><span id="conversionCprDelta" class="kpi-delta neutral">-</span></div><strong id="conversionCprKpi">-</strong><span class="kpi-sub">Conversion Spend ÷ Conversion Register</span></article>
           <article class="kpi-card"><div class="kpi-label"><span>CTR</span><span id="ctrDelta" class="kpi-delta neutral">-</span></div><strong id="ctrKpi">-</strong><span class="kpi-sub">Clicks ÷ Impressions</span></article>
           <article class="kpi-card"><div class="kpi-label"><span>Clicks</span></div><strong id="clicksKpi">-</strong><span class="kpi-sub">คลิกทั้งหมด</span></article>
           <article class="kpi-card"><div class="kpi-label"><span>Landing Page Views</span></div><strong id="lpvKpi">-</strong><span class="kpi-sub">จำนวน LPV</span></article>
@@ -106,7 +106,7 @@
         </section>
 
         <section class="dashboard-grid">
-          <article id="performanceTrendPanel" class="panel"><div class="panel-header"><div><h3>Performance Trend</h3><p>เลือก Metric เพื่ออ่านแนวโน้มรายวันได้ชัดเจน</p></div><div class="chart-controls"><select id="trendMetric"><option value="spend">Spend</option><option value="results">Complete Register</option><option value="cpr">Cost / Complete Register</option><option value="ctr">CTR</option><option value="clicks">Clicks</option><option value="lpv">LPV</option><option value="impressions">Impressions</option></select><span id="trendBadge" class="panel-badge">ย้อนหลังทั้งหมด</span></div></div><div class="panel-body"><div class="chart-box"><canvas id="trendChart"></canvas></div></div></article>
+          <article id="performanceTrendPanel" class="panel"><div class="panel-header"><div><h3>Performance Trend</h3><p>เลือก Metric เพื่ออ่านแนวโน้มรายวันได้ชัดเจน</p></div><div class="chart-controls"><select id="trendMetric"><option value="spend">Spend</option><option value="results">Complete Register ทั้งหมด</option><option value="cpr">Blended Cost / Complete Register</option><option value="conversionResults">Conversion Complete Register</option><option value="conversionCpr">Conversion Cost / Complete Register</option><option value="ctr">CTR</option><option value="clicks">Clicks</option><option value="lpv">LPV</option><option value="impressions">Impressions</option></select><span id="trendBadge" class="panel-badge">ย้อนหลังทั้งหมด</span></div></div><div class="panel-body"><div class="chart-box"><canvas id="trendChart"></canvas></div></div></article>
           <aside id="aiIntelligencePanel" class="panel ai-panel-fixed"><div class="panel-header"><div><h3>AI Daily Intelligence</h3><p>สรุปเฉพาะประเด็นสำคัญล่าสุดสำหรับตัดสินใจเร็ว</p></div><span id="aiSummaryBadge" class="panel-badge">กำลังโหลด AI</span></div><div class="panel-body"><div id="actionList" class="ai-placeholder"><div><strong>กำลังโหลดข้อมูลวิเคราะห์จาก AI</strong><p>ระบบกำลังอ่าน ai_daily_summary_latest จาก Dashboard API</p></div></div></div></aside>
         </section>
 
@@ -117,13 +117,13 @@
 
         <article class="panel"><div class="panel-header"><div><h3>Campaign Summary</h3><p>เรียงลำดับและกรองเฉพาะชุดข้อมูลที่อยากตรวจได้ทันที</p></div><div class="summary-toolbar"><div class="toolbar-field"><label for="campaignSummarySort">Sort</label><select id="campaignSummarySort"><option value="spend_desc">Spend มาก → น้อย</option><option value="spend_asc">Spend น้อย → มาก</option><option value="results_desc">Results มาก → น้อย</option><option value="results_asc">Results น้อย → มาก</option><option value="name_asc">A → Z</option><option value="name_desc">Z → A</option></select></div><div class="toolbar-field"><label for="campaignSummaryObjective">Objective</label><select id="campaignSummaryObjective"><option value="">ทั้งหมด</option></select></div><span id="campaignTableBadge" class="panel-badge">0 campaigns</span></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Campaign</th><th>Game</th><th>Account</th><th>Objective</th><th>Spend</th><th>Results</th><th>Cost / Result</th><th>CTR</th><th>LPV</th><th>Cost / LPV</th><th>Status</th></tr></thead><tbody id="campaignTableBody"><tr><td colspan="11" class="table-empty">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="campaignPageInfo">Top 10</span><div class="pager"><button id="campaignPrev">ก่อนหน้า</button><button id="campaignNext">ถัดไป</button></div></div></article>
         <article class="panel"><div class="panel-header"><div><h3>Creative Summary</h3><p>เลือก Top Creative และเรียงตาม Metric ที่สนใจได้</p></div><div class="summary-toolbar"><div class="toolbar-field"><label for="creativeSummarySort">Sort</label><select id="creativeSummarySort"><option value="spend_desc">Spend มาก → น้อย</option><option value="spend_asc">Spend น้อย → มาก</option><option value="results_desc">Results มาก → น้อย</option><option value="results_asc">Results น้อย → มาก</option><option value="name_asc">A → Z</option><option value="name_desc">Z → A</option></select></div><div class="toolbar-field"><label for="creativeSummaryObjective">Objective</label><select id="creativeSummaryObjective"><option value="">ทั้งหมด</option></select></div><div class="toolbar-field"><label for="creativeSummaryTop">Top</label><select id="creativeSummaryTop"><option value="10">Top 10</option><option value="20">Top 20</option><option value="50">Top 50</option><option value="all">ทั้งหมด</option></select></div><span id="creativeTableBadge" class="panel-badge">0 creatives</span></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Creative Group</th><th>Ad / Creative</th><th>Campaign</th><th>Objective</th><th>Spend</th><th>Results</th><th>Cost / Result</th><th>CTR</th><th>Frequency</th></tr></thead><tbody id="creativeTableBody"><tr><td colspan="9" class="table-empty">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="creativePageInfo">Top 10</span><div class="pager"><button id="creativePrev">ก่อนหน้า</button><button id="creativeNext">ถัดไป</button></div></div></article>
-        <footer class="footer-note">AI Marketing Copilot · Frontend v4.9.2 · Historical Data Ready</footer>
+        <footer class="footer-note">AI Marketing Copilot · Frontend v5.0.0 · Historical Data Ready</footer>
       </main>
     </section>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <script src="../assets/js/config.js?v=4.9.2"></script>
-  <script src="../assets/js/auth.js?v=4.9.2"></script>
-  <script src="../assets/js/dashboard.js?v=4.9.2"></script>
+  <script src="../assets/js/config.js?v=5.0.0"></script>
+  <script src="../assets/js/auth.js?v=5.0.0"></script>
+  <script src="../assets/js/dashboard.js?v=5.0.0"></script>
 </body>
 </html>

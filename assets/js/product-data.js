@@ -1,7 +1,7 @@
 'use strict';
 
 window.CopilotData = (() => {
-  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v10';
+  const CACHE_PREFIX = 'ai_marketing_copilot_dashboard_cache_v11';
   const MAX_PERSISTENT_CACHE_CHARS = 1000000;
   let memoryCache = null;
 
@@ -34,13 +34,13 @@ window.CopilotData = (() => {
     try {
       serialized = JSON.stringify(cache);
     } catch (error) {
-      console.warn('[AI Marketing Copilot v4.9.2] ไม่สามารถแปลง Dashboard Cache ได้', error);
+      console.warn('[AI Marketing Copilot v5.0.0] ไม่สามารถแปลง Dashboard Cache ได้', error);
       return false;
     }
 
     if (serialized.length > MAX_PERSISTENT_CACHE_CHARS) {
       cleanupDashboardCaches({ keepCurrent: false });
-      console.info(`[AI Marketing Copilot v4.9.2] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
+      console.info(`[AI Marketing Copilot v5.0.0] ข้าม Browser Cache เพราะข้อมูลมีขนาด ${serialized.length.toLocaleString()} ตัวอักษร`);
       return false;
     }
 
@@ -50,7 +50,7 @@ window.CopilotData = (() => {
       return true;
     } catch (error) {
       cleanupDashboardCaches({ keepCurrent: false });
-      console.warn('[AI Marketing Copilot v4.9.2] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง', error);
+      console.warn('[AI Marketing Copilot v5.0.0] Browser Cache เต็ม จึงใช้ข้อมูลจาก API โดยตรง', error);
       return false;
     }
   }
@@ -124,7 +124,7 @@ window.CopilotData = (() => {
     } catch (error) {
       const cached = readCache();
       if (cached?.dashboard) {
-        console.warn('[AI Marketing Copilot v4.9.2] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม', error);
+        console.warn('[AI Marketing Copilot v5.0.0] ใช้ Browser Cache เพราะ Dashboard API ไม่พร้อม', error);
         return cached;
       }
       throw error;
@@ -223,6 +223,9 @@ window.CopilotData = (() => {
         'Cost_Per_CompleteRegister',
         'CostPerCompleteRegister',
       ],
+      conversionSpend: ['Conversion_Spend'],
+      conversionCompleteRegister: ['Conversion_Complete_Register'],
+      conversionCpcr: ['Conversion_Cost_Per_Complete_Register'],
     };
 
     if (name === 'completeRegister') {
@@ -249,28 +252,56 @@ window.CopilotData = (() => {
       const explicit = field(row, map.cpcr, null);
       if (explicit !== null && explicit !== '') return num(explicit);
       const cr = metric(row, 'completeRegister');
-      return cr ? num(field(row, ['Spend', 'Amount_Spent'], 0)) / cr : 0;
+      return cr ? metric(row, 'spend') / cr : 0;
+    }
+
+    if (name === 'conversionSpend') {
+      const explicit = field(row, map.conversionSpend, null);
+      return explicit !== null && explicit !== ''
+        ? num(explicit)
+        : (isConversionObjective(row) ? metric(row, 'spend') : 0);
+    }
+
+    if (name === 'conversionCompleteRegister') {
+      const explicit = field(row, map.conversionCompleteRegister, null);
+      return explicit !== null && explicit !== ''
+        ? num(explicit)
+        : (isConversionObjective(row) ? metric(row, 'completeRegister') : 0);
+    }
+
+    if (name === 'conversionCpcr') {
+      const explicit = field(row, map.conversionCpcr, null);
+      if (explicit !== null && explicit !== '') return num(explicit);
+      const cr = metric(row, 'conversionCompleteRegister');
+      return cr ? metric(row, 'conversionSpend') / cr : 0;
     }
 
     return num(field(row, map[name] || [name], 0));
   };
 
   const aggregate = (list) => {
-    const totals = { spend: 0, impressions: 0, clicks: 0, lpv: 0, results: 0, reach: 0, completeRegister: 0 };
+    const totals = { spend: 0, impressions: 0, clicks: 0, lpv: 0, results: 0, reach: 0, completeRegister: 0, conversionSpend: 0, conversionCompleteRegister: 0 };
     for (const row of list) {
       for (const key of ['spend', 'impressions', 'clicks', 'lpv', 'results', 'reach']) totals[key] += metric(row, key);
       totals.completeRegister += metric(row, 'completeRegister');
+      totals.conversionSpend += metric(row, 'conversionSpend');
+      totals.conversionCompleteRegister += metric(row, 'conversionCompleteRegister');
     }
     totals.ctr = totals.impressions ? (totals.clicks / totals.impressions) * 100 : 0;
     totals.cpr = totals.results ? totals.spend / totals.results : 0;
     totals.cplpv = totals.lpv ? totals.spend / totals.lpv : 0;
     totals.cpcr = totals.completeRegister ? totals.spend / totals.completeRegister : 0;
+    totals.conversionCpcr = totals.conversionCompleteRegister ? totals.conversionSpend / totals.conversionCompleteRegister : 0;
     return totals;
   };
 
   const aggregateConversion = (list) => {
-    const rows = list.filter((row) => isConversionObjective(row));
-    return aggregate(rows);
+    const totals = aggregate(list);
+    return {
+      spend: totals.conversionSpend,
+      completeRegister: totals.conversionCompleteRegister,
+      cpcr: totals.conversionCpcr,
+    };
   };
 
   const group = (list, keyFn) => {

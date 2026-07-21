@@ -91,8 +91,8 @@
         <div class="advisor-kpi"><span>Confidence</span><strong>${esc(value(row, ['Confidence'], '-'))}</strong></div>
         <div class="advisor-kpi"><span>${esc(value(row, ['Main_Metric_Label', 'Main_Metric'], 'Main Metric'))} 7D</span><strong>${esc(value(baseline, ['value_7d'], value(row, ['Trend_7D'], '-')))}</strong></div>
         <div class="advisor-kpi"><span>Spend ล่าสุด</span><strong>฿${D.money(value(row, ['Spend']))}</strong></div>
-        <div class="advisor-kpi"><span>Complete Register</span><strong>${isConversion ? D.integer(completeRegister) : '-'}</strong></div>
-        <div class="advisor-kpi"><span>Cost / Complete Register</span><strong>${isConversion && completeRegister ? `฿${D.money(cpcr)}` : '-'}</strong></div>
+        <div class="advisor-kpi"><span>Complete Register</span><strong>${completeRegister ? D.integer(completeRegister) : '-'}</strong></div>
+        <div class="advisor-kpi"><span>Cost / Complete Register</span><strong>${completeRegister ? `฿${D.money(cpcr)}` : '-'}</strong></div>
       </div>
 
       <div class="advisor-recommendation">

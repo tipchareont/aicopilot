@@ -1,4 +1,4 @@
-# Frontend V5.3.1 — Quota Guard
+# Frontend V5.3.3 — Quota Guard
 
 - Replaced overlapping `setInterval` polling with single-flight recursive `setTimeout`.
 - Polls every 30 seconds only after the previous request finishes.

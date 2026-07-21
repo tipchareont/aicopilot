@@ -5,9 +5,9 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>My Workspace | AI Marketing Copilot</title>
-<link href="../assets/css/app.css?v=5.3.1" rel="stylesheet"/>
-<link href="../assets/css/product.css?v=5.3.1" rel="stylesheet"/>
-<link href="../assets/css/workspace.css?v=5.3.1" rel="stylesheet"/>
+<link href="../assets/css/app.css?v=5.3.3" rel="stylesheet"/>
+<link href="../assets/css/product.css?v=5.3.3" rel="stylesheet"/>
+<link href="../assets/css/workspace.css?v=5.3.3" rel="stylesheet"/>
 </head>
 <body>
 <section aria-live="polite" class="loading hidden" id="loading">
@@ -35,15 +35,15 @@
 </button>
 <div class="sidebar-subnav sidebar-workspace-subnav" hidden id="workspaceSubnav">
 <a data-nav-page="workspace" href="./index.html"><span>Profile &amp; My Access</span></a>
-<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management">
+<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management" hidden>
 <button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button">
 <span>Data Management</span>
 <span aria-hidden="true" class="sidebar-chevron">⌄</span>
 </button>
 <div class="sidebar-subnav sidebar-subnav-nested" hidden id="dataManagementSubnav">
-<a data-workspace-view="health" href="./index.html?view=health"><span>Data Health</span></a>
-<a data-workspace-view="repair" href="./index.html?view=repair"><span>Data Repair</span></a>
-<a data-workspace-view="activity" href="./index.html?view=activity"><span>Repair Activity</span></a>
+<a data-workspace-view="health" hidden href="./index.html?view=health"><span>Data Health</span></a>
+<a data-workspace-view="repair" hidden href="./index.html?view=repair"><span>Data Repair</span></a>
+<a data-workspace-view="activity" hidden href="./index.html?view=activity"><span>Repair Activity</span></a>
 </div>
 </div>
 </div>
@@ -237,12 +237,29 @@
 </div>
 </article>
 </section>
-<footer class="footer-note">AI Marketing Copilot · User Control Center · Frontend V5.3.1</footer>
+
+<section class="workspace-section" data-section="checking">
+<article class="panel access-state-panel">
+<div class="access-state-icon">…</div>
+<h2>กำลังตรวจสอบสิทธิ์</h2>
+<p id="permissionCheckMessage">กำลังตรวจสอบ Role, Game และ Account ของบัญชีนี้</p>
+</article>
+</section>
+<section class="workspace-section" data-section="denied">
+<article class="panel access-state-panel access-denied-panel">
+<div class="access-state-icon">!</div>
+<span class="access-state-label">ACCESS DENIED</span>
+<h2>คุณไม่มีสิทธิ์ใช้งาน <span id="deniedFeatureName">ฟีเจอร์นี้</span></h2>
+<p id="deniedMessage">บัญชีนี้ไม่ได้รับสิทธิ์สำหรับฟีเจอร์ที่ร้องขอ</p>
+<button class="button-primary" id="backToWorkspaceButton" type="button">กลับไป My Workspace</button>
+</article>
+</section>
+<footer class="footer-note">AI Marketing Copilot · User Control Center · Frontend V5.3.3</footer>
 </main>
 </section>
 </div>
-<script src="../assets/js/config.js?v=5.3.1"></script>
-<script src="../assets/js/auth.js?v=5.3.1"></script>
-<script src="../assets/js/workspace.js?v=5.3.1"></script>
-<script src="../assets/js/sidebar.js?v=5.3.1"></script></body>
+<script src="../assets/js/config.js?v=5.3.3"></script>
+<script src="../assets/js/auth.js?v=5.3.3"></script>
+<script src="../assets/js/workspace.js?v=5.3.3"></script>
+<script src="../assets/js/sidebar.js?v=5.3.3"></script></body>
 </html>

@@ -6,9 +6,10 @@
   const path = normalize(window.location.pathname);
   const view = normalize(new URLSearchParams(window.location.search).get('view'));
   const username = normalize(localStorage.getItem('username') || 'user');
-  const role = upper(localStorage.getItem('role'));
+  const initialRole = upper(localStorage.getItem('role'));
   const GLOBAL_TOOL_ROLES = new Set(['ADMIN', 'DEVELOPER', 'DEV', 'MANAGER']);
-  const cacheKey = `ai_marketing_copilot_workspace_cache_v3_${username}`;
+  const CACHE_VERSION = 5;
+  const cacheKey = `ai_marketing_copilot_workspace_cache_v5_${username}`;
 
   const page = (() => {
     if (path.includes('/creative-weekly/')) return 'creative-weekly';
@@ -24,20 +25,36 @@
   const isDataView = page === 'workspace' && dataViews.has(view);
   const isWorkspace = page === 'workspace';
 
-  const readAccess = () => {
+  const readCachedPermission = () => {
     try {
       const parsed = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-      if (Number(parsed?.cache_version || 0) !== 3) return [];
-      return Array.isArray(parsed?.data?.access) ? parsed.data.access : [];
-    } catch { return []; }
+      if (Number(parsed?.cache_version || 0) !== CACHE_VERSION) return null;
+      const access = Array.isArray(parsed?.data?.access) ? parsed.data.access : [];
+      const role = upper(parsed?.data?.profile?.role || initialRole);
+      return { known: true, access, role };
+    } catch {
+      return null;
+    }
+  };
+
+  const cached = readCachedPermission();
+  let permissionState = cached || {
+    known: GLOBAL_TOOL_ROLES.has(initialRole),
+    access: [],
+    role: initialRole,
   };
 
   const permissionSnapshot = () => {
-    const access = readAccess();
+    const role = upper(permissionState.role || initialRole);
+    const access = Array.isArray(permissionState.access) ? permissionState.access : [];
     const global = GLOBAL_TOOL_ROLES.has(role);
     return {
+      known: Boolean(permissionState.known || global),
       canHealth: global || access.some((row) => row?.permissions?.can_view === true),
-      canRepair: global || access.some((row) => row?.permissions?.can_repair_missing === true || row?.permissions?.can_force_refresh === true),
+      canRepair: global || access.some((row) =>
+        row?.permissions?.can_repair_missing === true ||
+        row?.permissions?.can_force_refresh === true
+      ),
     };
   };
 
@@ -75,23 +92,31 @@
     const healthLink = document.querySelector('[data-workspace-view="health"]');
     const repairLink = document.querySelector('[data-workspace-view="repair"]');
     const activityLink = document.querySelector('[data-workspace-view="activity"]');
-    if (healthLink) healthLink.hidden = !permission.canHealth;
-    if (repairLink) repairLink.hidden = !permission.canRepair;
-    if (activityLink) activityLink.hidden = !permission.canRepair;
-    const hasVisibleTool = permission.canHealth || permission.canRepair;
+
+    // Hide tools until permission is resolved. This prevents a flash of unauthorized menu items.
+    if (healthLink) healthLink.hidden = !permission.known || !permission.canHealth;
+    if (repairLink) repairLink.hidden = !permission.known || !permission.canRepair;
+    if (activityLink) activityLink.hidden = !permission.known || !permission.canRepair;
+
+    const hasVisibleTool = permission.known && (permission.canHealth || permission.canRepair);
     if (dataGroup) dataGroup.hidden = !hasVisibleTool;
 
-    if (isWorkspace && ((view === 'health' && !permission.canHealth) || (['repair', 'activity'].includes(view) && !permission.canRepair))) {
-      const target = new URL('./index.html', location.href);
-      location.replace(target.href);
-      return false;
+    if (!hasVisibleTool) {
+      setGroup(dataGroup, dataToggle, dataSubnav, false, false);
     }
-    return true;
+
+    return permission;
   };
 
-  const visible = applyToolVisibility();
+  const permission = applyToolVisibility();
   setGroup(workspaceGroup, workspaceToggle, workspaceSubnav, isWorkspace, isWorkspace);
-  if (visible) setGroup(dataGroup, dataToggle, dataSubnav, isDataView && !dataGroup?.hidden, isDataView && !dataGroup?.hidden);
+  setGroup(
+    dataGroup,
+    dataToggle,
+    dataSubnav,
+    Boolean(permission.known && isDataView && !dataGroup?.hidden),
+    Boolean(permission.known && isDataView && !dataGroup?.hidden)
+  );
 
   workspaceToggle?.addEventListener('click', () => {
     const next = workspaceToggle.getAttribute('aria-expanded') !== 'true';
@@ -106,9 +131,20 @@
     setGroup(dataGroup, dataToggle, dataSubnav, next, isDataView);
   });
 
-  window.addEventListener('workspace-permissions-updated', () => {
-    if (!applyToolVisibility()) return;
+  window.addEventListener('workspace-permissions-updated', (event) => {
+    const detail = event?.detail || {};
+    permissionState = {
+      known: true,
+      access: Array.isArray(detail.access) ? detail.access : [],
+      role: upper(detail.role || initialRole),
+    };
+
+    const updated = applyToolVisibility();
     if (isWorkspace) setGroup(workspaceGroup, workspaceToggle, workspaceSubnav, true, true);
-    if (isDataView && !dataGroup?.hidden) setGroup(dataGroup, dataToggle, dataSubnav, true, true);
+    if (isDataView && !dataGroup?.hidden) {
+      setGroup(dataGroup, dataToggle, dataSubnav, true, true);
+    } else if (!updated.canHealth && !updated.canRepair) {
+      setGroup(dataGroup, dataToggle, dataSubnav, false, false);
+    }
   });
 })();

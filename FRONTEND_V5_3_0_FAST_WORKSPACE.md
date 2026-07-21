@@ -1,4 +1,4 @@
-# Frontend V5.3.1 — Fast Workspace
+# Frontend V5.3.3 — Fast Workspace
 
 - Data Management is nested under My Workspace in the sidebar.
 - My Workspace renders immediately from the signed-in session and a short-lived local cache.

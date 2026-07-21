@@ -1,4 +1,4 @@
-# Frontend V5.3.1 — Permission Guard & Health Recovery
+# Frontend V5.3.3 — Permission Guard & Health Recovery
 
 - Data Repair และ Repair Activity แสดงเฉพาะบัญชีที่มี `can_repair_missing` หรือ `can_force_refresh`
 - Data Health แสดงเฉพาะบัญชีที่มี Account ซึ่ง `can_view`

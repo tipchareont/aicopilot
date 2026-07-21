@@ -15,6 +15,8 @@
     healthLoaded: false,
     activityLoaded: false,
     startingRepair: false,
+    permissionsResolved: false,
+    permissionError: '',
   };
 
   const $ = (id) => document.getElementById(id);
@@ -29,6 +31,8 @@
     health:{title:'Data Health',subtitle:'ตรวจสอบช่วงข้อมูล วันที่ขาด และเวลาที่อัปเดตล่าสุด',primary:false},
     repair:{title:'Data Repair',subtitle:'สร้างคำขอ Backfill ภายใต้สิทธิ์ Game และ Account',primary:false},
     activity:{title:'Repair Activity',subtitle:'ติดตามประวัติคำขอและสถานะ Data Repair',primary:false},
+    checking:{title:'กำลังตรวจสอบสิทธิ์',subtitle:'ระบบกำลังตรวจสอบสิทธิ์ของบัญชีนี้',primary:false},
+    denied:{title:'ไม่มีสิทธิ์ใช้งาน',subtitle:'บัญชีนี้ไม่ได้รับสิทธิ์สำหรับฟีเจอร์ที่ร้องขอ',primary:false},
   };
 
   const PERMISSION_LEVELS = [
@@ -57,8 +61,8 @@
     return new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'}).format(parsed);
   };
 
-  const WORKSPACE_CACHE_VERSION = 3;
-  const cacheKey = () => `ai_marketing_copilot_workspace_cache_v3_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const WORKSPACE_CACHE_VERSION = 5;
+  const cacheKey = () => `ai_marketing_copilot_workspace_cache_v5_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const readLocalCache = () => {
     try {
       const parsed=JSON.parse(localStorage.getItem(cacheKey())||'null');
@@ -107,6 +111,7 @@
     if(['repair','activity'].includes(view))return hasRepairAccess();
     return false;
   };
+  const requestedFeatureLabel=(view)=>({health:'Data Health',repair:'Data Repair',activity:'Repair Activity'}[view]||'Data Management');
   const notifyPermissionUpdate=()=>window.dispatchEvent(new CustomEvent('workspace-permissions-updated',{detail:{access:getAccess(),role:state.overview?.profile?.role||localStorage.getItem('role')||''}}));
 
   const renderProfile = () => {
@@ -115,7 +120,7 @@
     const role=profile.role||localStorage.getItem('role')||'-';
     $('displayName').textContent=display;$('role').textContent=role;
     $('welcomeTitle').textContent=`สวัสดี ${display}`;
-    $('welcomeSubtitle').textContent=getAccess().length?`คุณเข้าถึง ${getAccess().length} Account และใช้สิทธิ์ระดับ ${role}`:'กำลังซิงก์ขอบเขต Game และ Account ล่าสุด';
+    $('welcomeSubtitle').textContent=getAccess().length?`คุณเข้าถึง ${getAccess().length} Account และใช้สิทธิ์ระดับ ${role}`:(state.overview?.success===true?(state.overview?.access_message||'บัญชีนี้ยังไม่มี Game หรือ Account ที่ได้รับมอบหมาย'):'กำลังซิงก์ขอบเขต Game และ Account ล่าสุด');
     $('profileAvatar').textContent=clean(display||'U').charAt(0).toUpperCase();
     $('profileDisplayName').textContent=display;
     $('profileUsername').textContent=(profile.username||localStorage.getItem('username'))?`@${profile.username||localStorage.getItem('username')}`:'-';
@@ -201,10 +206,13 @@
           result=await request({action:'OVERVIEW',refresh:true});
         }
         state.overview={...(state.overview||{}),...result};
+        state.permissionsResolved=true;
+        state.permissionError='';
         saveLocalCache({profile:result.profile,access:Array.isArray(result.access)?result.access:[],system_status:result.system_status});
         renderProfile();renderAccess();populateAccessSelects();notifyPermissionUpdate();
         setStatusChip($('systemStatus'),result.system_status||'READY');return result;
       } catch(error){
+        state.permissionError=error.message||'ไม่สามารถตรวจสอบสิทธิ์ได้';
         setStatusChip($('systemStatus'),state.overview?'STALE':'ERROR');
         if(!state.overview)throw error;
         $('welcomeSubtitle').textContent=`แสดงข้อมูลล่าสุดที่บันทึกไว้ · ซิงก์ไม่สำเร็จ: ${error.message}`;
@@ -262,25 +270,52 @@
   };
   const activateView=(view,updateUrl=false)=>{
     const requested=VIEW_CONFIG[view]?view:'profile';
-    const selected=viewAllowed(requested)?requested:'profile';
+    const isProtected=['health','repair','activity'].includes(requested);
+    let selected=requested;
+
+    if(isProtected&&!state.permissionsResolved){
+      selected='checking';
+    }else if(isProtected&&!viewAllowed(requested)){
+      selected='denied';
+    }
+
     const config=VIEW_CONFIG[selected];
     document.querySelectorAll('.workspace-section').forEach(section=>section.classList.toggle('active',section.dataset.section===selected));
     document.querySelectorAll('.workspace-tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===selected));
-    $('workspaceHero').classList.toggle('hidden',!config.primary);$('workspacePrimaryTabs').classList.toggle('hidden',!config.primary);
-    $('workspacePageTitle').textContent=config.title;$('workspacePageSubtitle').textContent=config.subtitle;
-    if(updateUrl||selected!==requested){const url=new URL(location.href);if(selected==='profile')url.searchParams.delete('view');else url.searchParams.set('view',selected);history.replaceState({view:selected},'',url)}
-    if(selected!==requested)$('welcomeSubtitle').textContent='เมนูที่ร้องขอถูกซ่อน เนื่องจากบัญชีนี้ไม่มีสิทธิ์ใช้งาน';
-    ensureViewData(selected);
+    $('workspaceHero').classList.toggle('hidden',!config.primary);
+    $('workspacePrimaryTabs').classList.toggle('hidden',!config.primary);
+    $('workspacePageTitle').textContent=config.title;
+    $('workspacePageSubtitle').textContent=config.subtitle;
+
+    if(selected==='denied'){
+      const feature=requestedFeatureLabel(requested);
+      if($('deniedFeatureName'))$('deniedFeatureName').textContent=feature;
+      if($('deniedMessage'))$('deniedMessage').textContent=`บัญชีนี้ไม่มีสิทธิ์ใช้งาน ${feature} เมนูนี้จึงไม่แสดงใน Sidebar และระบบจะไม่เรียก API ของฟีเจอร์ดังกล่าว`;
+    }
+
+    if(selected==='checking'){
+      if($('permissionCheckMessage'))$('permissionCheckMessage').textContent=state.permissionError||'กำลังตรวจสอบ Role, Game และ Account ของบัญชีนี้';
+    }
+
+    if(updateUrl&&['profile','access','health','repair','activity'].includes(requested)){
+      const url=new URL(location.href);
+      if(requested==='profile')url.searchParams.delete('view');
+      else url.searchParams.set('view',requested);
+      history.replaceState({view:requested},'',url);
+    }
+
+    if(['profile','access','health','repair','activity'].includes(selected))ensureViewData(selected);
   };
 
   const renderInstant=()=>{
     const cached=readLocalCache();
+    state.permissionsResolved=Boolean(cached);
     state.overview=cached||{profile:{username:localStorage.getItem('username')||'',display_name:localStorage.getItem('display_name')||'',role:localStorage.getItem('role')||'',session_expires_at:localStorage.getItem('session_expires_at')||'',user_status:'ACTIVE'},access:[]};
     renderProfile();renderAccess();populateAccessSelects();notifyPermissionUpdate();
     $('loading').classList.add('hidden');$('shell').classList.remove('hidden');
   };
 
-  const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{const view=routeViewFromUrl();await loadOverview(true);if(view==='health')await loadHealth(true);if(view==='activity')await loadActivity(true)});$('logoutButton').addEventListener('click',()=>{window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
+  const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{const view=routeViewFromUrl();await loadOverview(true);if(view==='health')await loadHealth(true);if(view==='activity')await loadActivity(true)});$('logoutButton').addEventListener('click',()=>{window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('backToWorkspaceButton')?.addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.delete('view');history.replaceState({view:'profile'},'',url);activateView('profile',false)});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
 
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.activeRequestId&&!state.pollTimer&&!state.pollInFlight)schedulePoll(1000)});
   bindEvents();renderInstant();activateView(routeViewFromUrl(),false);

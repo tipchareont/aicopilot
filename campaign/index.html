@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Campaign | AI Marketing Copilot</title><link href="../assets/css/app.css?v=5.3.1" rel="stylesheet"/><link href="../assets/css/product.css?v=5.0.0" rel="stylesheet"/></head><body>
+<html lang="th"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Campaign | AI Marketing Copilot</title><link href="../assets/css/app.css?v=5.3.3" rel="stylesheet"/><link href="../assets/css/product.css?v=5.0.0" rel="stylesheet"/></head><body>
 <section class="loading" id="loading"><div class="loading-spinner"></div><h2>กำลังโหลด Campaign</h2><p id="loadingMessage">กำลังอ่านข้อมูลจริงจาก Dashboard API...</p></section>
 <div class="shell hidden" id="shell"><aside class="sidebar"><div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div><nav aria-label="Main navigation" class="sidebar-nav">
 <a data-nav-page="dashboard" href="../dashboard/index.html"><span>Dashboard</span></a>
@@ -15,15 +15,15 @@
 </button>
 <div class="sidebar-subnav sidebar-workspace-subnav" hidden id="workspaceSubnav">
 <a data-nav-page="workspace" href="../workspace/index.html"><span>Profile &amp; My Access</span></a>
-<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management">
+<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management" hidden>
 <button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button">
 <span>Data Management</span>
 <span aria-hidden="true" class="sidebar-chevron">⌄</span>
 </button>
 <div class="sidebar-subnav sidebar-subnav-nested" hidden id="dataManagementSubnav">
-<a data-workspace-view="health" href="../workspace/index.html?view=health"><span>Data Health</span></a>
-<a data-workspace-view="repair" href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
-<a data-workspace-view="activity" href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
+<a data-workspace-view="health" hidden href="../workspace/index.html?view=health"><span>Data Health</span></a>
+<a data-workspace-view="repair" hidden href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
+<a data-workspace-view="activity" hidden href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
 </div>
 </div>
 </div>
@@ -35,4 +35,4 @@
 <section class="chart-layout"><article class="panel"><div class="panel-header"><div><h3>Campaign Ranking</h3><p>Top 10 ตาม Metric ที่เลือก</p></div><select class="button-secondary" id="rankingMetric"><option value="spend">Spend</option><option value="results">Results</option><option value="cpr">Cost / Result</option><option value="ctr">CTR</option></select></div><div class="panel-body"><div class="chart-box"><canvas id="campaignChart"></canvas></div></div></article><article class="panel"><div class="panel-header"><div><h3>Data Quality</h3><p>ช่วยตรวจว่าข้อมูลที่ใช้ตัดสินใจครบเพียงใด</p></div></div><div class="panel-body"><div class="legend-list" id="statusLegend"></div></div></article></section>
 <article class="panel"><div class="panel-header"><div><h3>Campaign Table</h3><p>คลิกชื่อ Campaign เพื่อดู Daily Trend และ Campaign Detail</p></div><span class="panel-badge" id="tableBadge">0 campaigns</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th class="sortable" data-sort="name">Campaign</th><th>Game</th><th>Account</th><th>Objective</th><th class="sortable" data-sort="spend">Spend</th><th class="sortable" data-sort="results">Results</th><th class="sortable" data-sort="cpr">Cost / Result</th><th class="sortable" data-sort="ctr">CTR</th><th>LPV</th><th>Cost / LPV</th><th>Data Status</th></tr></thead><tbody id="tableBody"><tr><td class="empty" colspan="11">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="pageInfo">-</span><div class="pager"><button id="prevButton">ก่อนหน้า</button><button id="nextButton">ถัดไป</button></div></div></article><footer class="footer-note">AI Marketing Copilot · Campaign Frontend V3</footer></main></section></div>
 <div class="drawer" id="drawer"><div class="drawer-backdrop" data-close=""></div><aside class="drawer-panel drawer-wide"><div class="drawer-head"><div><h3 id="drawerTitle">Campaign Detail</h3><p class="search-hint" id="drawerSubtitle">-</p></div><button class="drawer-close" data-close="">ปิด</button></div><div class="detail-grid" id="drawerContent"></div><section class="detail-section"><div class="detail-section-head"><div><h4>Daily Trend</h4><p>ใช้ข้อมูลจริงรายวันของ Campaign นี้</p></div><select class="button-secondary" id="detailMetric"><option value="spend">Spend</option><option value="results">Results</option><option value="cpr">Cost / Result</option><option value="ctr">CTR</option><option value="lpv">LPV</option></select></div><div class="chart-box detail-chart"><canvas id="detailChart"></canvas></div></section><section class="detail-section"><h4>Campaign Context</h4><div class="context-list" id="contextList"></div></section><section class="detail-section ai-slot"><strong>AI Analysis</strong><span>รอเชื่อม AI Decision Engine — ไม่มีการสร้างคำแนะนำจำลอง</span></section></aside></div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script src="../assets/js/config.js?v=5.0.0"></script><script src="../assets/js/auth.js?v=5.0.0"></script><script src="../assets/js/product-data.js?v=5.0.0"></script><script src="../assets/js/campaign.js?v=5.0.0"></script><script src="../assets/js/sidebar.js?v=5.3.1"></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script src="../assets/js/config.js?v=5.0.0"></script><script src="../assets/js/auth.js?v=5.0.0"></script><script src="../assets/js/product-data.js?v=5.0.0"></script><script src="../assets/js/campaign.js?v=5.0.0"></script><script src="../assets/js/sidebar.js?v=5.3.3"></script></body></html>

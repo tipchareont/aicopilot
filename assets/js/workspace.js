@@ -9,6 +9,7 @@
     pollInFlight: false,
     pollFailures: 0,
     overviewLoading: false,
+    overviewPromise: null,
     healthLoading: false,
     activityLoading: false,
     healthLoaded: false,
@@ -56,16 +57,17 @@
     return new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'}).format(parsed);
   };
 
-  const cacheKey = () => `ai_marketing_copilot_workspace_cache_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const WORKSPACE_CACHE_VERSION = 3;
+  const cacheKey = () => `ai_marketing_copilot_workspace_cache_v3_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const readLocalCache = () => {
     try {
       const parsed=JSON.parse(localStorage.getItem(cacheKey())||'null');
-      if(!parsed?.data||Date.now()-Number(parsed.saved_at||0)>15*60*1000)return null;
+      if(!parsed?.data||Number(parsed.cache_version||0)!==WORKSPACE_CACHE_VERSION||Date.now()-Number(parsed.saved_at||0)>15*60*1000)return null;
       return parsed.data;
     } catch { return null; }
   };
   const saveLocalCache = (data) => {
-    try { localStorage.setItem(cacheKey(),JSON.stringify({saved_at:Date.now(),data})); } catch {}
+    try { localStorage.setItem(cacheKey(),JSON.stringify({cache_version:WORKSPACE_CACHE_VERSION,saved_at:Date.now(),data})); } catch {}
   };
 
   const request = async (payload) => {
@@ -96,6 +98,16 @@
 
   const getAccess=()=>Array.isArray(state.overview?.access)?state.overview.access:[];
   const selectedAccess=(prefix)=>{const id=$(`${prefix}Account`)?.value||'';return getAccess().find(r=>clean(r.account_id)===clean(id))||null};
+
+  const hasViewAccess=()=>getAccess().some(row=>row.permissions?.can_view===true);
+  const hasRepairAccess=()=>getAccess().some(row=>row.permissions?.can_repair_missing===true||row.permissions?.can_force_refresh===true);
+  const viewAllowed=(view)=>{
+    if(['profile','access'].includes(view))return true;
+    if(view==='health')return hasViewAccess();
+    if(['repair','activity'].includes(view))return hasRepairAccess();
+    return false;
+  };
+  const notifyPermissionUpdate=()=>window.dispatchEvent(new CustomEvent('workspace-permissions-updated',{detail:{access:getAccess(),role:state.overview?.profile?.role||localStorage.getItem('role')||''}}));
 
   const renderProfile = () => {
     const profile=state.overview?.profile||{};
@@ -129,9 +141,22 @@
     ['health','repair'].forEach(prefix=>{
       const game=$(`${prefix}Game`),account=$(`${prefix}Account`); if(!game||!account)return;
       const currentGame=game.value; const games=[...new Map(access.map(r=>[r.game_id,r])).values()];
+      if(!games.length){
+        game.innerHTML='<option value="">ไม่มี Game ที่ได้รับสิทธิ์</option>';
+        account.innerHTML='<option value="">ไม่มี Account ที่ได้รับสิทธิ์</option>';
+        game.disabled=true;account.disabled=true;
+        if(prefix==='health')renderHealth();else syncRepairPermissions();
+        return;
+      }
+      game.disabled=false;account.disabled=false;
       game.innerHTML=games.map(r=>`<option value="${escapeHtml(r.game_id)}">${escapeHtml(r.game_name||r.game_id)}</option>`).join('');
       if(games.some(r=>r.game_id===currentGame))game.value=currentGame;
-      const renderAccounts=()=>{const filtered=access.filter(r=>r.game_id===game.value),current=account.value;account.innerHTML=filtered.map(r=>`<option value="${escapeHtml(r.account_id)}">${escapeHtml(r.account_name||r.account_id)}</option>`).join('');if(filtered.some(r=>r.account_id===current))account.value=current;if(prefix==='health')renderHealth();else syncRepairPermissions()};
+      const renderAccounts=()=>{
+        const filtered=access.filter(r=>r.game_id===game.value),current=account.value;
+        account.innerHTML=filtered.map(r=>`<option value="${escapeHtml(r.account_id)}">${escapeHtml(r.account_name||r.account_id)}</option>`).join('');
+        if(filtered.some(r=>r.account_id===current))account.value=current;
+        if(prefix==='health')renderHealth();else syncRepairPermissions();
+      };
       game.onchange=renderAccounts;account.onchange=prefix==='health'?renderHealth:syncRepairPermissions;renderAccounts();
     });
   };
@@ -152,7 +177,7 @@
   const syncRepairPermissions=()=>{const access=selectedAccess('repair'),canForce=Boolean(access?.permissions?.can_force_refresh);$('forceRefreshRow').classList.toggle('hidden',!canForce);if(!canForce)$('forceRefresh').checked=false;$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true;setStatusChip($('previewStatusBadge'),'รอ Preview')};
   const renderPreview=(preview)=>{state.preview=preview;$('previewSelectedCount').textContent=preview.selected_dates_count||0;$('previewExistingCount').textContent=preview.existing_dates_count||0;$('previewZeroCount').textContent=preview.verified_zero_dates_count||0;$('previewRepairCount').textContent=preview.repair_dates_count||0;setStatusChip($('previewStatusBadge'),preview.allowed?'READY':'REJECTED');$('startRepairButton').disabled=!preview.allowed;const ranges=Array.isArray(preview.recommended_missing_ranges)?preview.recommended_missing_ranges:[];$('previewDetail').innerHTML=[`<p><strong>${escapeHtml(preview.message||'')}</strong></p>`,ranges.length?`<ul>${ranges.map(r=>`<li>${formatDate(r.start_date)} – ${formatDate(r.end_date)}</li>`).join('')}</ul>`:'',preview.force_refresh?'<p>คำขอนี้จะ Refresh วันที่ที่มีข้อมูลอยู่แล้ว และต้องมีเหตุผลประกอบ</p>':''].join('');$('repairMessage').textContent=preview.allowed?'ตรวจสอบผ่าน สามารถเริ่มซ่อมข้อมูลได้':(preview.message||'คำขอไม่ผ่านเงื่อนไข');$('repairMessage').className=`form-message ${preview.allowed?'success':'error'}`};
 
-  const previewRepair=async()=>{const access=selectedAccess('repair'),start=$('repairStartDate').value,end=$('repairEndDate').value;if(!access||!start||!end)throw new Error('กรุณาเลือก Game, Account และช่วงวันที่');const result=await request({action:'PREVIEW_REPAIR',game_id:access.game_id,account_id:access.account_id,start_date:start,end_date:end,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});renderPreview(result.preview||result)};
+  const previewRepair=async()=>{if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ใช้ Data Repair');const access=selectedAccess('repair'),start=$('repairStartDate').value,end=$('repairEndDate').value;if(!access||!start||!end)throw new Error('กรุณาเลือก Game, Account และช่วงวันที่');const result=await request({action:'PREVIEW_REPAIR',game_id:access.game_id,account_id:access.account_id,start_date:start,end_date:end,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});renderPreview(result.preview||result)};
   const startRepair=async()=>{if(state.startingRepair)return;if(!state.preview?.allowed)throw new Error('กรุณา Preview และแก้เงื่อนไขให้ผ่านก่อน');state.startingRepair=true;try{const access=selectedAccess('repair');const result=await request({action:'START_REPAIR',game_id:access.game_id,account_id:access.account_id,start_date:$('repairStartDate').value,end_date:$('repairEndDate').value,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});if(!result.request_id)throw new Error('Backend ไม่คืน Request ID');state.activeRequestId=result.request_id;localStorage.setItem('active_repair_request_id',result.request_id);$('repairProgressPanel').classList.remove('hidden');$('repairRequestId').textContent=result.request_id;updateRepairProgress(result.status||'QUEUED',result.message||'ระบบรับคำขอแล้ว');startPolling()}finally{state.startingRepair=false}};
 
   const updateRepairProgress=(status,message)=>{const upper=clean(status).toUpperCase(),map={QUEUED:10,VALIDATING:20,BACKFILL_RUNNING:45,MIGRATION_RUNNING:70,SUMMARY_REBUILDING:85,COMPLETED:100,FAILED:100,REJECTED:100};setStatusChip($('repairStatusBadge'),upper);$('repairProgressBar').style.width=`${map[upper]||15}%`;$('repairProgressMessage').textContent=message||upper};
@@ -165,19 +190,95 @@
   const setSectionLoading=(view,loading)=>document.querySelector(`[data-section="${view}"]`)?.classList.toggle('is-loading',loading);
 
   const loadOverview=async(force=false)=>{
-    if(state.overviewLoading)return;state.overviewLoading=true;$('refreshButton').disabled=true;setStatusChip($('systemStatus'),'SYNCING');
-    try{const result=await request({action:'OVERVIEW',refresh:force});state.overview={...(state.overview||{}),...result};saveLocalCache({profile:result.profile,access:result.access,system_status:result.system_status});renderProfile();renderAccess();populateAccessSelects();setStatusChip($('systemStatus'),result.system_status||'READY');return result}
-    catch(error){setStatusChip($('systemStatus'),state.overview?'STALE':'ERROR');if(!state.overview)throw error;$('welcomeSubtitle').textContent=`แสดงข้อมูลล่าสุดที่บันทึกไว้ · ซิงก์ไม่สำเร็จ: ${error.message}`;return state.overview}
-    finally{state.overviewLoading=false;$('refreshButton').disabled=false}
+    if(state.overviewPromise)return state.overviewPromise;
+    state.overviewLoading=true;$('refreshButton').disabled=true;setStatusChip($('systemStatus'),'SYNCING');
+    state.overviewPromise=(async()=>{
+      try{
+        let result=await request({action:'OVERVIEW',refresh:force});
+        const role=normalizePermissionLevel(result?.profile?.role||localStorage.getItem('role'));
+        const globalRole=['ADMIN','DEVELOPER','MANAGER'].includes(role);
+        if(!force&&result?.cache_hit===true&&globalRole&&(!Array.isArray(result.access)||result.access.length===0)){
+          result=await request({action:'OVERVIEW',refresh:true});
+        }
+        state.overview={...(state.overview||{}),...result};
+        saveLocalCache({profile:result.profile,access:Array.isArray(result.access)?result.access:[],system_status:result.system_status});
+        renderProfile();renderAccess();populateAccessSelects();notifyPermissionUpdate();
+        setStatusChip($('systemStatus'),result.system_status||'READY');return result;
+      } catch(error){
+        setStatusChip($('systemStatus'),state.overview?'STALE':'ERROR');
+        if(!state.overview)throw error;
+        $('welcomeSubtitle').textContent=`แสดงข้อมูลล่าสุดที่บันทึกไว้ · ซิงก์ไม่สำเร็จ: ${error.message}`;
+        return state.overview;
+      } finally {
+        state.overviewLoading=false;$('refreshButton').disabled=false;
+      }
+    })();
+    try{return await state.overviewPromise}finally{state.overviewPromise=null}
   };
 
-  const loadHealth=async(force=false)=>{if(state.healthLoading||(!force&&state.healthLoaded))return;state.healthLoading=true;setSectionLoading('health',true);try{if(!getAccess().length)await loadOverview(false);const result=await request({action:'DATA_HEALTH',refresh:force});state.overview={...(state.overview||{}),health:Array.isArray(result.health)?result.health:[]};state.healthLoaded=true;renderHealth()}finally{state.healthLoading=false;setSectionLoading('health',false)}};
-  const loadActivity=async(force=false)=>{if(state.activityLoading||(!force&&state.activityLoaded))return;state.activityLoading=true;setSectionLoading('activity',true);try{const result=await request({action:'REPAIR_ACTIVITY',refresh:force});state.overview={...(state.overview||{}),repair_requests:Array.isArray(result.repair_requests)?result.repair_requests:[]};state.activityLoaded=true;renderActivity()}finally{state.activityLoading=false;setSectionLoading('activity',false)}};
+  const isWorkspaceCacheError=(error)=>/WORKSPACE_CACHE_REQUIRED|Workspace Cache|CACHE_REQUIRED/i.test(clean(error?.message));
 
-  const ensureViewData=(view)=>{if(view==='health')loadHealth(false).catch(e=>{$('missingDateList').innerHTML=`<span class="empty-inline">${escapeHtml(e.message)}</span>`});if(view==='activity')loadActivity(false).catch(e=>{$('activityTableBody').innerHTML=`<tr><td colspan="5" class="empty">${escapeHtml(e.message)}</td></tr>`})};
-  const activateView=(view,updateUrl=false)=>{const selected=VIEW_CONFIG[view]?view:'profile',config=VIEW_CONFIG[selected];document.querySelectorAll('.workspace-section').forEach(s=>s.classList.toggle('active',s.dataset.section===selected));document.querySelectorAll('.workspace-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===selected));$('workspaceHero').classList.toggle('hidden',!config.primary);$('workspacePrimaryTabs').classList.toggle('hidden',!config.primary);$('workspacePageTitle').textContent=config.title;$('workspacePageSubtitle').textContent=config.subtitle;if(updateUrl){const url=new URL(location.href);if(selected==='profile')url.searchParams.delete('view');else url.searchParams.set('view',selected);history.pushState({view:selected},'',url)}ensureViewData(selected)};
+  const loadHealth=async(force=false)=>{
+    if(state.healthLoading||(!force&&state.healthLoaded))return;
+    state.healthLoading=true;setSectionLoading('health',true);
+    try{
+      if(!hasViewAccess())await loadOverview(false);
+      if(!hasViewAccess())throw new Error('บัญชีนี้ไม่มี Game หรือ Account ที่ได้รับสิทธิ์ดู Data Health');
+      let result;
+      try{result=await request({action:'DATA_HEALTH',refresh:force})}
+      catch(error){
+        if(!isWorkspaceCacheError(error))throw error;
+        await loadOverview(true);
+        if(!hasViewAccess())throw new Error('บัญชีนี้ไม่มี Game หรือ Account ที่ได้รับสิทธิ์ดู Data Health');
+        result=await request({action:'DATA_HEALTH',refresh:true});
+      }
+      state.overview={...(state.overview||{}),health:Array.isArray(result.health)?result.health:[]};
+      state.healthLoaded=true;populateAccessSelects();renderHealth();
+    } finally {state.healthLoading=false;setSectionLoading('health',false)}
+  };
 
-  const renderInstant=()=>{const cached=readLocalCache();state.overview=cached||{profile:{username:localStorage.getItem('username')||'',display_name:localStorage.getItem('display_name')||'',role:localStorage.getItem('role')||'',session_expires_at:localStorage.getItem('session_expires_at')||'',user_status:'ACTIVE'},access:[]};renderProfile();renderAccess();populateAccessSelects();$('loading').classList.add('hidden');$('shell').classList.remove('hidden')};
+  const loadActivity=async(force=false)=>{
+    if(state.activityLoading||(!force&&state.activityLoaded))return;
+    state.activityLoading=true;setSectionLoading('activity',true);
+    try{
+      if(!getAccess().length)await loadOverview(false);
+      if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ดู Repair Activity');
+      let result;
+      try{result=await request({action:'REPAIR_ACTIVITY',refresh:force})}
+      catch(error){
+        if(!isWorkspaceCacheError(error))throw error;
+        await loadOverview(true);
+        if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ดู Repair Activity');
+        result=await request({action:'REPAIR_ACTIVITY',refresh:true});
+      }
+      state.overview={...(state.overview||{}),repair_requests:Array.isArray(result.repair_requests)?result.repair_requests:[]};
+      state.activityLoaded=true;renderActivity();
+    } finally {state.activityLoading=false;setSectionLoading('activity',false)}
+  };
+
+  const ensureViewData=(view)=>{
+    if(view==='health')loadHealth(false).catch(e=>{$('missingDateList').innerHTML=`<span class="empty-inline">${escapeHtml(e.message)}</span>`});
+    if(view==='activity')loadActivity(false).catch(e=>{$('activityTableBody').innerHTML=`<tr><td colspan="5" class="empty">${escapeHtml(e.message)}</td></tr>`});
+  };
+  const activateView=(view,updateUrl=false)=>{
+    const requested=VIEW_CONFIG[view]?view:'profile';
+    const selected=viewAllowed(requested)?requested:'profile';
+    const config=VIEW_CONFIG[selected];
+    document.querySelectorAll('.workspace-section').forEach(section=>section.classList.toggle('active',section.dataset.section===selected));
+    document.querySelectorAll('.workspace-tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===selected));
+    $('workspaceHero').classList.toggle('hidden',!config.primary);$('workspacePrimaryTabs').classList.toggle('hidden',!config.primary);
+    $('workspacePageTitle').textContent=config.title;$('workspacePageSubtitle').textContent=config.subtitle;
+    if(updateUrl||selected!==requested){const url=new URL(location.href);if(selected==='profile')url.searchParams.delete('view');else url.searchParams.set('view',selected);history.replaceState({view:selected},'',url)}
+    if(selected!==requested)$('welcomeSubtitle').textContent='เมนูที่ร้องขอถูกซ่อน เนื่องจากบัญชีนี้ไม่มีสิทธิ์ใช้งาน';
+    ensureViewData(selected);
+  };
+
+  const renderInstant=()=>{
+    const cached=readLocalCache();
+    state.overview=cached||{profile:{username:localStorage.getItem('username')||'',display_name:localStorage.getItem('display_name')||'',role:localStorage.getItem('role')||'',session_expires_at:localStorage.getItem('session_expires_at')||'',user_status:'ACTIVE'},access:[]};
+    renderProfile();renderAccess();populateAccessSelects();notifyPermissionUpdate();
+    $('loading').classList.add('hidden');$('shell').classList.remove('hidden');
+  };
 
   const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{const view=routeViewFromUrl();await loadOverview(true);if(view==='health')await loadHealth(true);if(view==='activity')await loadActivity(true)});$('logoutButton').addEventListener('click',()=>{window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
 

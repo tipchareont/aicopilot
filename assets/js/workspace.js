@@ -66,7 +66,7 @@
   const readLocalCache = () => {
     try {
       const parsed=JSON.parse(localStorage.getItem(cacheKey())||'null');
-      if(!parsed?.data||Number(parsed.cache_version||0)!==WORKSPACE_CACHE_VERSION||Date.now()-Number(parsed.saved_at||0)>15*60*1000)return null;
+      if(!parsed?.data||Number(parsed.cache_version||0)!==WORKSPACE_CACHE_VERSION)return null;
       return parsed.data;
     } catch { return null; }
   };
@@ -88,6 +88,19 @@
     if(!data||typeof data!=='object'||Array.isArray(data))throw new Error(`User Control API ไม่คืนข้อมูลที่ถูกต้อง (${response.status})`);
     if(!response.ok||data.success===false)throw new Error(data.message||`User Control API Error (${response.status})`);
     return data;
+  };
+
+
+  const refreshSessionSnapshot = async () => {
+    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),30000);
+    try{
+      const response=await fetch(window.APP_CONFIG.SESSION_VALIDATE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:window.Auth.token()}),signal:controller.signal});
+      let data=null;try{data=await response.json()}catch{}
+      if(response.status===401||!response.ok||data?.success===false){window.Auth.redirectToLogin();throw new Error(data?.message||'Session หมดอายุ')}
+      if(!data?.bootstrap)throw new Error('Session Snapshot ไม่มี Bootstrap Data');
+      window.Auth.saveWorkspaceBootstrap(data.bootstrap);
+      return data.bootstrap;
+    }catch(error){if(error?.name==='AbortError')throw new Error('Session API ใช้เวลาตอบนานเกิน 30 วินาที');throw error}finally{clearTimeout(timeout)}
   };
 
   const setStatusChip = (element,status) => {
@@ -188,81 +201,22 @@
   const updateRepairProgress=(status,message)=>{const upper=clean(status).toUpperCase(),map={QUEUED:10,VALIDATING:20,BACKFILL_RUNNING:45,MIGRATION_RUNNING:70,SUMMARY_REBUILDING:85,COMPLETED:100,FAILED:100,REJECTED:100};setStatusChip($('repairStatusBadge'),upper);$('repairProgressBar').style.width=`${map[upper]||15}%`;$('repairProgressMessage').textContent=message||upper};
   const stopPolling=()=>{clearTimeout(state.pollTimer);state.pollTimer=null;state.pollInFlight=false};
   const schedulePoll=(ms)=>{clearTimeout(state.pollTimer);state.pollTimer=setTimeout(runRepairPoll,ms)};
-  const runRepairPoll=async()=>{if(!state.activeRequestId||state.pollInFlight)return;if(document.hidden){schedulePoll(30000);return}state.pollInFlight=true;try{const result=await request({action:'REPAIR_STATUS',request_id:state.activeRequestId}),repair=result?.repair_request;if(!repair||typeof repair!=='object')throw new Error('Backend ไม่คืนสถานะคำขอ');const status=clean(repair.status).toUpperCase();updateRepairProgress(status,repair.message||repair.error_message||`สถานะ: ${status}`);state.pollFailures=0;if(['COMPLETED','FAILED','REJECTED'].includes(status)){stopPolling();localStorage.removeItem('active_repair_request_id');state.activeRequestId='';setTimeout(()=>{loadHealth(true).catch(()=>{});loadActivity(true).catch(()=>{})},3000);return}schedulePoll(30000)}catch(error){state.pollFailures+=1;const delay=Math.min(30000*(2**Math.min(state.pollFailures,2)),120000);$('repairProgressMessage').textContent=`${error.message} · ระบบจะลองใหม่ใน ${Math.round(delay/1000)} วินาที`;if(state.pollFailures>=5){stopPolling();$('repairProgressMessage').textContent=`${error.message} · หยุดเช็กอัตโนมัติเพื่อป้องกัน API Limit งาน Backend อาจยังทำงานอยู่`;return}schedulePoll(delay)}finally{state.pollInFlight=false}};
+  const runRepairPoll=async()=>{if(!state.activeRequestId||state.pollInFlight)return;if(document.hidden){schedulePoll(30000);return}state.pollInFlight=true;try{const result=await request({action:'REPAIR_STATUS',request_id:state.activeRequestId}),repair=result?.repair_request;if(!repair||typeof repair!=='object')throw new Error('Backend ไม่คืนสถานะคำขอ');const status=clean(repair.status).toUpperCase();updateRepairProgress(status,repair.message||repair.error_message||`สถานะ: ${status}`);state.pollFailures=0;if(['COMPLETED','FAILED','REJECTED'].includes(status)){if(result.bootstrap_patch&&typeof result.bootstrap_patch==='object'){state.overview={...(state.overview||{}),...result.bootstrap_patch};saveLocalCache(state.overview);renderHealth();renderActivity();populateAccessSelects()}stopPolling();localStorage.removeItem('active_repair_request_id');state.activeRequestId='';return}schedulePoll(30000)}catch(error){state.pollFailures+=1;const delay=Math.min(30000*(2**Math.min(state.pollFailures,2)),120000);$('repairProgressMessage').textContent=`${error.message} · ระบบจะลองใหม่ใน ${Math.round(delay/1000)} วินาที`;if(state.pollFailures>=5){stopPolling();$('repairProgressMessage').textContent=`${error.message} · หยุดเช็กอัตโนมัติเพื่อป้องกัน API Limit งาน Backend อาจยังทำงานอยู่`;return}schedulePoll(delay)}finally{state.pollInFlight=false}};
   const startPolling=()=>{stopPolling();state.pollFailures=0;schedulePoll(5000)};
 
   const routeViewFromUrl=()=>{const requested=clean(new URLSearchParams(location.search).get('view')).toLowerCase();return VIEW_CONFIG[requested]?requested:'profile'};
   const setSectionLoading=(view,loading)=>document.querySelector(`[data-section="${view}"]`)?.classList.toggle('is-loading',loading);
 
   const loadOverview=async(force=false)=>{
+    if(!force)return state.overview;
     if(state.overviewPromise)return state.overviewPromise;
     state.overviewLoading=true;$('refreshButton').disabled=true;setStatusChip($('systemStatus'),'SYNCING');
-    state.overviewPromise=(async()=>{
-      try{
-        let result=await request({action:'OVERVIEW',refresh:force});
-        const role=normalizePermissionLevel(result?.profile?.role||localStorage.getItem('role'));
-        const globalRole=['ADMIN','DEVELOPER','MANAGER'].includes(role);
-        if(!force&&result?.cache_hit===true&&globalRole&&(!Array.isArray(result.access)||result.access.length===0)){
-          result=await request({action:'OVERVIEW',refresh:true});
-        }
-        state.overview={...(state.overview||{}),...result};
-        state.permissionsResolved=true;
-        state.permissionError='';
-        saveLocalCache({profile:result.profile,access:Array.isArray(result.access)?result.access:[],system_status:result.system_status});
-        renderProfile();renderAccess();populateAccessSelects();notifyPermissionUpdate();
-        setStatusChip($('systemStatus'),result.system_status||'READY');return result;
-      } catch(error){
-        state.permissionError=error.message||'ไม่สามารถตรวจสอบสิทธิ์ได้';
-        setStatusChip($('systemStatus'),state.overview?'STALE':'ERROR');
-        if(!state.overview)throw error;
-        $('welcomeSubtitle').textContent=`แสดงข้อมูลล่าสุดที่บันทึกไว้ · ซิงก์ไม่สำเร็จ: ${error.message}`;
-        return state.overview;
-      } finally {
-        state.overviewLoading=false;$('refreshButton').disabled=false;
-      }
-    })();
+    state.overviewPromise=(async()=>{try{const result=await refreshSessionSnapshot();state.overview={...(state.overview||{}),...result};state.permissionsResolved=true;state.permissionError='';saveLocalCache(state.overview);renderProfile();renderAccess();populateAccessSelects();renderHealth();renderActivity();notifyPermissionUpdate();setStatusChip($('systemStatus'),result.system_status||'READY');return state.overview}catch(error){state.permissionError=error.message||'ไม่สามารถโหลด Session Snapshot ได้';setStatusChip($('systemStatus'),state.overview?'STALE':'ERROR');throw error}finally{state.overviewLoading=false;$('refreshButton').disabled=false}})();
     try{return await state.overviewPromise}finally{state.overviewPromise=null}
   };
 
-  const isWorkspaceCacheError=(error)=>/WORKSPACE_CACHE_REQUIRED|Workspace Cache|CACHE_REQUIRED/i.test(clean(error?.message));
-
-  const loadHealth=async(force=false)=>{
-    if(state.healthLoading||(!force&&state.healthLoaded))return;
-    state.healthLoading=true;setSectionLoading('health',true);
-    try{
-      if(!hasViewAccess())await loadOverview(false);
-      if(!hasViewAccess())throw new Error('บัญชีนี้ไม่มี Game หรือ Account ที่ได้รับสิทธิ์ดู Data Health');
-      let result;
-      try{result=await request({action:'DATA_HEALTH',refresh:force})}
-      catch(error){
-        if(!isWorkspaceCacheError(error))throw error;
-        await loadOverview(true);
-        if(!hasViewAccess())throw new Error('บัญชีนี้ไม่มี Game หรือ Account ที่ได้รับสิทธิ์ดู Data Health');
-        result=await request({action:'DATA_HEALTH',refresh:true});
-      }
-      state.overview={...(state.overview||{}),health:Array.isArray(result.health)?result.health:[]};
-      state.healthLoaded=true;populateAccessSelects();renderHealth();
-    } finally {state.healthLoading=false;setSectionLoading('health',false)}
-  };
-
-  const loadActivity=async(force=false)=>{
-    if(state.activityLoading||(!force&&state.activityLoaded))return;
-    state.activityLoading=true;setSectionLoading('activity',true);
-    try{
-      if(!getAccess().length)await loadOverview(false);
-      if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ดู Repair Activity');
-      let result;
-      try{result=await request({action:'REPAIR_ACTIVITY',refresh:force})}
-      catch(error){
-        if(!isWorkspaceCacheError(error))throw error;
-        await loadOverview(true);
-        if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ดู Repair Activity');
-        result=await request({action:'REPAIR_ACTIVITY',refresh:true});
-      }
-      state.overview={...(state.overview||{}),repair_requests:Array.isArray(result.repair_requests)?result.repair_requests:[]};
-      state.activityLoaded=true;renderActivity();
-    } finally {state.activityLoading=false;setSectionLoading('activity',false)}
-  };
+  const loadHealth=async()=>{if(!hasViewAccess())throw new Error('บัญชีนี้ไม่มี Game หรือ Account ที่ได้รับสิทธิ์ดู Data Health');state.healthLoaded=true;populateAccessSelects();renderHealth()};
+  const loadActivity=async()=>{if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ดู Repair Activity');state.activityLoaded=true;renderActivity()};
 
   const ensureViewData=(view)=>{
     if(view==='health')loadHealth(false).catch(e=>{$('missingDateList').innerHTML=`<span class="empty-inline">${escapeHtml(e.message)}</span>`});
@@ -315,9 +269,11 @@
     $('loading').classList.add('hidden');$('shell').classList.remove('hidden');
   };
 
-  const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{const view=routeViewFromUrl();await loadOverview(true);if(view==='health')await loadHealth(true);if(view==='activity')await loadActivity(true)});$('logoutButton').addEventListener('click',()=>{window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('backToWorkspaceButton')?.addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.delete('view');history.replaceState({view:'profile'},'',url);activateView('profile',false)});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
+  const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{try{await loadOverview(true)}catch(error){$('welcomeSubtitle').textContent=`โหลด Session Snapshot ไม่สำเร็จ: ${error.message}`}});$('logoutButton').addEventListener('click',()=>{fetch(window.APP_CONFIG.LOGOUT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:window.Auth.token()}),keepalive:true}).catch(()=>{});window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('backToWorkspaceButton')?.addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.delete('view');history.replaceState({view:'profile'},'',url);activateView('profile',false)});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
 
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.activeRequestId&&!state.pollTimer&&!state.pollInFlight)schedulePoll(1000)});
-  bindEvents();renderInstant();activateView(routeViewFromUrl(),false);
-  loadOverview(false).then(()=>{activateView(routeViewFromUrl(),false);const saved=clean(localStorage.getItem('active_repair_request_id'));if(saved&&!state.activeRequestId){state.activeRequestId=saved;$('repairProgressPanel').classList.remove('hidden');$('repairRequestId').textContent=saved;updateRepairProgress('RUNNING','กำลังตรวจสอบสถานะคำขอเดิม');startPolling()}}).catch(error=>{setStatusChip($('systemStatus'),'ERROR');$('welcomeSubtitle').textContent=`ไม่สามารถซิงก์สิทธิ์ล่าสุด: ${error.message}`});
+  bindEvents();renderInstant();
+  if(!state.permissionsResolved){window.Auth.redirectToLogin();return}
+  activateView(routeViewFromUrl(),false);setStatusChip($('systemStatus'),state.overview?.system_status||'READY');
+  const saved=clean(localStorage.getItem('active_repair_request_id'));if(saved&&!state.activeRequestId){state.activeRequestId=saved;$('repairProgressPanel').classList.remove('hidden');$('repairRequestId').textContent=saved;updateRepairProgress('RUNNING','กำลังตรวจสอบสถานะคำขอเดิม');startPolling()}
 })();

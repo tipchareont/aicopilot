@@ -4,13 +4,13 @@ window.Auth = (() => {
   const AUTH_KEYS = ['session_token','session_id','session_expires_at','username','display_name','role'];
   const LEGACY_AUTH_KEYS = ['token','auth_token','Session_ID','sessionId','expires_at','Token_Expires_At','token_expires_at','Username','displayName','user_role'];
   const PROTECTED_ROUTES = new Set(['dashboard','campaign','creative','creative-weekly','scale-advisor','ai-chat','workspace']);
-  const WORKSPACE_CACHE_VERSION = 5;
+  const WORKSPACE_CACHE_VERSION = 6;
   let redirectInProgress = false;
   const firstStored = (keys) => { for (const key of keys) { const value=localStorage.getItem(key); if(value)return value; } return ''; };
   const currentRoute = () => { const segments=location.pathname.replace(/\/+$/,'').split('/').filter(Boolean); return segments.at(-1)==='index.html'?(segments.at(-2)||''):(segments.at(-1)||''); };
   const isProtectedRoute = () => PROTECTED_ROUTES.has(currentRoute());
   const parseBangkokDateTime = (value) => { if(!value)return null;let normalized=String(value).trim().replace(' ','T');if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(normalized))normalized+='+07:00';else if(/^\d{4}-\d{2}-\d{2}$/.test(normalized))normalized+='T23:59:59+07:00';const parsed=new Date(normalized);return Number.isNaN(parsed.getTime())?null:parsed; };
-  const workspaceCacheKey = (username='') => `ai_marketing_copilot_workspace_cache_v5_${String(username||localStorage.getItem('username')||'user').trim().toLowerCase()}`;
+  const workspaceCacheKey = (username='') => `ai_marketing_copilot_workspace_cache_v6_${String(username||localStorage.getItem('username')||'user').trim().toLowerCase()}`;
   const clearDashboardCache = () => { for(const key of Object.keys(localStorage)){if(key.startsWith('ai_marketing_copilot_dashboard_cache_')||key.startsWith('ai_marketing_copilot_workspace_cache_'))localStorage.removeItem(key);} };
   const saveWorkspaceBootstrap = (bootstrap) => { if(!bootstrap||typeof bootstrap!=='object')return;try{localStorage.setItem(workspaceCacheKey(bootstrap?.profile?.username),JSON.stringify({cache_version:WORKSPACE_CACHE_VERSION,saved_at:Date.now(),data:bootstrap}));}catch{} };
   const workspaceBootstrap = () => { try{const parsed=JSON.parse(localStorage.getItem(workspaceCacheKey())||'null');return Number(parsed?.cache_version||0)===WORKSPACE_CACHE_VERSION?parsed.data:null;}catch{return null;} };

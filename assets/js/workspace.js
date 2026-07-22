@@ -15,6 +15,7 @@
     healthLoaded: false,
     activityLoaded: false,
     startingRepair: false,
+    savingDataStartDate: false,
     permissionsResolved: false,
     permissionError: '',
   };
@@ -36,12 +37,12 @@
   };
 
   const PERMISSION_LEVELS = [
-    {key:'VIEWER',label:'Viewer',scope:'เฉพาะ Game / Account ที่ได้รับมอบหมาย',view:true,health:true,repair:false,force:false},
-    {key:'EDITOR',label:'Editor',scope:'เฉพาะ Game / Account ที่ได้รับมอบหมาย',view:true,health:true,repair:true,force:false},
-    {key:'GAME_OWNER',label:'Game Owner',scope:'เฉพาะเกมและ Account ที่เป็นเจ้าของ',view:true,health:true,repair:true,force:false},
-    {key:'MANAGER',label:'Manager',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true},
-    {key:'DEVELOPER',label:'Developer',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true},
-    {key:'ADMIN',label:'Admin',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true},
+    {key:'VIEWER',label:'Viewer',scope:'เฉพาะ Game / Account ที่ได้รับมอบหมาย',view:true,health:true,repair:false,force:false,startDate:false},
+    {key:'EDITOR',label:'Editor',scope:'เฉพาะ Game / Account ที่ได้รับมอบหมาย',view:true,health:true,repair:true,force:false,startDate:false},
+    {key:'GAME_OWNER',label:'Game Owner',scope:'เฉพาะเกมและ Account ที่เป็นเจ้าของ',view:true,health:true,repair:true,force:false,startDate:true},
+    {key:'MANAGER',label:'Manager',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true,startDate:true},
+    {key:'DEVELOPER',label:'Developer',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true,startDate:true},
+    {key:'ADMIN',label:'Admin',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true,startDate:true},
   ];
 
   const normalizePermissionLevel = (value) => {
@@ -61,8 +62,8 @@
     return new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',dateStyle:'medium',timeStyle:'short'}).format(parsed);
   };
 
-  const WORKSPACE_CACHE_VERSION = 5;
-  const cacheKey = () => `ai_marketing_copilot_workspace_cache_v5_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const WORKSPACE_CACHE_VERSION = 6;
+  const cacheKey = () => `ai_marketing_copilot_workspace_cache_v6_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const readLocalCache = () => {
     try {
       const parsed=JSON.parse(localStorage.getItem(cacheKey())||'null');
@@ -149,9 +150,9 @@
     const activeLevels=new Set([normalizePermissionLevel(profile.role||localStorage.getItem('role')),...rows.map(r=>normalizePermissionLevel(r.access_level))].filter(Boolean));
     const activeLabels=PERMISSION_LEVELS.filter(l=>activeLevels.has(l.key)).map(l=>l.label);
     $('currentPermissionBadge').textContent=activeLabels.length?`Active: ${activeLabels.join(' + ')}`:'กำลังซิงก์';
-    $('permissionMatrixBody').innerHTML=PERMISSION_LEVELS.map(level=>{const current=activeLevels.has(level.key);const cell=a=>`<td class="permission-cell ${a?'yes':'no'}">${a?'✓':'—'}</td>`;return `<tr class="${current?'permission-current':'permission-muted'}"><td><span class="access-badge">${escapeHtml(level.label)}</span>${current?'<span class="permission-current-label">สิทธิ์ของคุณ</span>':''}</td><td class="permission-scope">${escapeHtml(level.scope)}</td>${cell(level.view)}${cell(level.health)}${cell(level.repair)}${cell(level.force)}</tr>`}).join('');
+    $('permissionMatrixBody').innerHTML=PERMISSION_LEVELS.map(level=>{const current=activeLevels.has(level.key);const cell=a=>`<td class="permission-cell ${a?'yes':'no'}">${a?'✓':'—'}</td>`;return `<tr class="${current?'permission-current':'permission-muted'}"><td><span class="access-badge">${escapeHtml(level.label)}</span>${current?'<span class="permission-current-label">สิทธิ์ของคุณ</span>':''}</td><td class="permission-scope">${escapeHtml(level.scope)}</td>${cell(level.view)}${cell(level.health)}${cell(level.repair)}${cell(level.force)}${cell(level.startDate)}</tr>`}).join('');
     $('accessCountBadge').textContent=`${rows.length} Account`;
-    $('accessTableBody').innerHTML=rows.length?rows.map(row=>`<tr><td><strong>${escapeHtml(row.game_name||row.game_id)}</strong><br><small>${escapeHtml(row.game_id)}</small></td><td>${escapeHtml(row.account_name||row.account_id)}<br><small>${escapeHtml(row.account_id)}</small></td><td><span class="access-badge">${escapeHtml(row.access_level)}</span></td><td class="${row.permissions?.can_view?'permission-yes':'permission-no'}">${row.permissions?.can_view?'✓':'—'}</td><td class="${row.permissions?.can_repair_missing?'permission-yes':'permission-no'}">${row.permissions?.can_repair_missing?'✓':'—'}</td><td class="${row.permissions?.can_force_refresh?'permission-yes':'permission-no'}">${row.permissions?.can_force_refresh?'✓':'—'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">กำลังซิงก์สิทธิ์ Game และ Account</td></tr>';
+    $('accessTableBody').innerHTML=rows.length?rows.map(row=>`<tr><td><strong>${escapeHtml(row.game_name||row.game_id)}</strong><br><small>${escapeHtml(row.game_id)}</small></td><td>${escapeHtml(row.account_name||row.account_id)}<br><small>${escapeHtml(row.account_id)}</small></td><td><span class="access-badge">${escapeHtml(row.access_level)}</span></td><td class="${row.permissions?.can_view?'permission-yes':'permission-no'}">${row.permissions?.can_view?'✓':'—'}</td><td class="${row.permissions?.can_repair_missing?'permission-yes':'permission-no'}">${row.permissions?.can_repair_missing?'✓':'—'}</td><td class="${row.permissions?.can_force_refresh?'permission-yes':'permission-no'}">${row.permissions?.can_force_refresh?'✓':'—'}</td><td class="${row.permissions?.can_manage_data_start_date?'permission-yes':'permission-no'}">${row.permissions?.can_manage_data_start_date?'✓':'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">กำลังซิงก์สิทธิ์ Game และ Account</td></tr>';
   };
 
   const populateAccessSelects = () => {
@@ -185,6 +186,28 @@
     const missing=Array.isArray(health.missing_dates)?health.missing_dates:[],zero=Array.isArray(health.verified_zero_dates)?health.verified_zero_dates:[];
     const chips=[...missing.map(d=>`<span class="date-chip missing">${formatDate(d)}</span>`),...zero.slice(-30).map(d=>`<span class="date-chip zero">Zero: ${formatDate(d)}</span>`)];
     $('missingDateList').innerHTML=chips.length?chips.join(''):'<span class="empty-inline">ไม่พบวันที่ขาดในช่วง Coverage ปัจจุบัน</span>';
+    const canManage=access?.permissions?.can_manage_data_start_date===true;
+    const startDate=clean(health.data_start_date||access?.data_start_date||health.data_from).slice(0,10);
+    $('healthDataStartDate').value=startDate;
+    $('healthDataStartDate').disabled=!canManage;
+    $('saveDataStartDateButton').classList.toggle('hidden',!canManage);
+    $('dataStartDateHelp').textContent=canManage?'ใช้กำหนดวันแรกที่ระบบเริ่มตรวจ Missing Data ของ Account นี้':'คุณดูค่านี้ได้ แต่ Role ปัจจุบันไม่มีสิทธิ์แก้ไข';
+  };
+
+  const saveDataStartDate=async()=>{
+    if(state.savingDataStartDate)return;
+    const access=selectedAccess('health'),date=$('healthDataStartDate').value;
+    if(!access)throw new Error('กรุณาเลือก Game และ Account');
+    if(access.permissions?.can_manage_data_start_date!==true)throw new Error('บัญชีนี้ไม่มีสิทธิ์แก้วันที่เริ่มเก็บข้อมูล Ads');
+    if(!date)throw new Error('กรุณาเลือกวันที่เริ่มเก็บข้อมูล Ads');
+    state.savingDataStartDate=true;$('saveDataStartDateButton').disabled=true;$('dataStartDateMessage').textContent='กำลังบันทึก...';$('dataStartDateMessage').className='form-message';
+    try{
+      const result=await request({action:'UPDATE_DATA_START_DATE',game_id:access.game_id,account_id:access.account_id,data_start_date:date});
+      if(!result.bootstrap)throw new Error('Backend ไม่คืน Bootstrap ที่อัปเดตแล้ว');
+      state.overview=result.bootstrap;state.permissionsResolved=true;saveLocalCache(state.overview);window.Auth.saveWorkspaceBootstrap(state.overview);
+      renderProfile();renderAccess();populateAccessSelects();renderHealth();notifyPermissionUpdate();
+      $('dataStartDateMessage').textContent=result.message||'บันทึกวันที่เริ่มเก็บข้อมูล Ads แล้ว';$('dataStartDateMessage').className='form-message success';
+    }finally{state.savingDataStartDate=false;$('saveDataStartDateButton').disabled=false;}
   };
 
   const renderActivity = () => {
@@ -269,7 +292,7 @@
     $('loading').classList.add('hidden');$('shell').classList.remove('hidden');
   };
 
-  const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{try{await loadOverview(true)}catch(error){$('welcomeSubtitle').textContent=`โหลด Session Snapshot ไม่สำเร็จ: ${error.message}`}});$('logoutButton').addEventListener('click',()=>{fetch(window.APP_CONFIG.LOGOUT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:window.Auth.token()}),keepalive:true}).catch(()=>{});window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('backToWorkspaceButton')?.addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.delete('view');history.replaceState({view:'profile'},'',url);activateView('profile',false)});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
+  const bindEvents=()=>{document.querySelectorAll('.workspace-tab').forEach(b=>b.addEventListener('click',()=>activateView(b.dataset.tab,true)));addEventListener('popstate',()=>activateView(routeViewFromUrl(),false));$('refreshButton').addEventListener('click',async()=>{try{await loadOverview(true)}catch(error){$('welcomeSubtitle').textContent=`โหลด Session Snapshot ไม่สำเร็จ: ${error.message}`}});$('logoutButton').addEventListener('click',()=>{fetch(window.APP_CONFIG.LOGOUT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:window.Auth.token()}),keepalive:true}).catch(()=>{});window.Auth.clearDashboardCache();window.Auth.clear();location.replace('../index.html')});$('backToWorkspaceButton')?.addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.delete('view');history.replaceState({view:'profile'},'',url);activateView('profile',false)});$('forceRefresh').addEventListener('change',()=>{$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true});$('saveDataStartDateButton').addEventListener('click',async()=>{try{await saveDataStartDate()}catch(error){$('dataStartDateMessage').textContent=error.message;$('dataStartDateMessage').className='form-message error'}});$('previewRepairButton').addEventListener('click',async()=>{try{$('repairMessage').textContent='กำลังตรวจสอบ Coverage...';$('repairMessage').className='form-message';await previewRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error'}});$('startRepairButton').addEventListener('click',async()=>{try{$('startRepairButton').disabled=true;await startRepair()}catch(error){$('repairMessage').textContent=error.message;$('repairMessage').className='form-message error';$('startRepairButton').disabled=!state.preview?.allowed}})};
 
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.activeRequestId&&!state.pollTimer&&!state.pollInFlight)schedulePoll(1000)});
   bindEvents();renderInstant();

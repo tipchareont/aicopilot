@@ -3,7 +3,7 @@
 window.Auth = (() => {
   const AUTH_KEYS = ['session_token','session_id','session_expires_at','username','display_name','role'];
   const LEGACY_AUTH_KEYS = ['token','auth_token','Session_ID','sessionId','expires_at','Token_Expires_At','token_expires_at','Username','displayName','user_role'];
-  const PROTECTED_ROUTES = new Set(['dashboard','campaign','creative','creative-weekly','scale-advisor','ai-chat','workspace']);
+  const PROTECTED_ROUTES = new Set(['dashboard','campaign','creative','creative-weekly','scale-advisor','ai-chat','action-center','workspace']);
   const WORKSPACE_CACHE_VERSION = 6;
   let redirectInProgress = false;
   const firstStored = (keys) => { for (const key of keys) { const value=localStorage.getItem(key); if(value)return value; } return ''; };

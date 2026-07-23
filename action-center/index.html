@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Action Center | AI Marketing Copilot</title>
+<meta content="บันทึก Action ติดตามผล 1/3/7 วัน และใช้เคสจริงเป็นฐานความรู้สำหรับ AI Marketing Copilot" name="description"/>
+<link href="../assets/css/app.css?v=5.5.0" rel="stylesheet"/>
+<link href="../assets/css/product.css?v=5.5.0" rel="stylesheet"/>
+<link href="../assets/css/action-center.css?v=5.5.0" rel="stylesheet"/>
+</head>
+<body>
+<section aria-live="polite" class="loading" id="loading"><div class="loading-spinner"></div><h2>กำลังเตรียม Action Center</h2><p id="loadingMessage">กำลังโหลดปัญหา Action และผลลัพธ์ล่าสุด...</p></section>
+<div class="shell hidden" id="shell">
+<aside class="sidebar">
+<div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div>
+<nav aria-label="Main navigation" class="sidebar-nav">
+<a data-nav-page="dashboard" href="../dashboard/index.html"><span>Dashboard</span></a>
+<a data-nav-page="campaign" href="../campaign/index.html"><span>Campaign</span></a>
+<a data-nav-page="creative" href="../creative/index.html"><span>Creative</span></a>
+<a data-nav-page="creative-weekly" href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
+<a data-nav-page="scale-advisor" href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
+<a data-nav-page="action-center" href="../action-center/index.html"><span>Action Center</span></a>
+<a data-nav-page="ai-chat" href="../ai-chat/index.html"><span>AI Chat</span></a>
+<div class="sidebar-nav-group sidebar-workspace-group" data-nav-group="workspace">
+<button aria-controls="workspaceSubnav" aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>My Workspace</span><span aria-hidden="true" class="sidebar-chevron">⌄</span></button>
+<div class="sidebar-subnav sidebar-workspace-subnav" hidden id="workspaceSubnav">
+<a data-nav-page="workspace" href="../workspace/index.html"><span>Profile &amp; My Access</span></a>
+<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management" hidden>
+<button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button"><span>Data Management</span><span aria-hidden="true" class="sidebar-chevron">⌄</span></button>
+<div class="sidebar-subnav sidebar-subnav-nested" hidden id="dataManagementSubnav">
+<a data-workspace-view="health" hidden href="../workspace/index.html?view=health"><span>Data Health</span></a>
+<a data-workspace-view="repair" hidden href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
+<a data-workspace-view="activity" hidden href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
+</div></div></div></div>
+</nav>
+<div class="sidebar-footer">Action Logging · Outcome Learning</div>
+</aside>
+<section class="main">
+<header class="topbar"><div class="topbar-title"><h1>Action Center</h1><p>บันทึกสิ่งที่ทีมทำ ติดตามผล 1 / 3 / 7 วัน และเก็บเป็นเคสเรียนรู้ของระบบ</p></div><div class="topbar-actions"><button class="button-primary" id="refreshButton" type="button">รีเฟรชข้อมูล</button><div class="user-box"><div class="user-meta"><strong id="displayName">-</strong><span id="role">-</span></div><button class="button-secondary" id="logoutButton" type="button">Logout</button></div></div></header>
+<main class="content">
+<section class="action-notice"><div><strong>🧠 Case-Based Learning</strong><p>ระบบไม่ Train Model จากข้อมูลส่วนตัวโดยตรง แต่ค้นเคสเก่าที่คล้ายกัน เพื่อประกอบคำแนะนำจากผลลัพธ์จริง</p></div><span class="panel-badge" id="dataDateBadge">Data: -</span></section>
+<section class="metrics action-summary">
+<article class="metric-card"><span>Needs Action</span><strong id="needsActionCount">0</strong><small>ปัญหาที่ยังไม่มี Action</small></article>
+<article class="metric-card"><span>In Progress</span><strong id="inProgressCount">0</strong><small>กำลังดำเนินการหรือรอ Review</small></article>
+<article class="metric-card"><span>Outcome Ready</span><strong id="outcomeReadyCount">0</strong><small>มีผล 7 วันพร้อมตรวจ</small></article>
+<article class="metric-card"><span>Improved</span><strong id="improvedCount">0</strong><small>Action ที่ผลดีขึ้น</small></article>
+<article class="metric-card"><span>Total Actions</span><strong id="totalActionCount">0</strong><small>ฐานข้อมูล Action ทั้งหมด</small></article>
+</section>
+<section class="panel"><div class="panel-header"><div><h2>ตัวกรอง</h2><p>ค้นหาปัญหาและ Action ตาม Game, Account หรือสถานะ</p></div><span class="cache-note" id="cacheUpdatedAt">-</span></div><div class="panel-body"><div class="filters action-filters"><div class="field"><label for="searchFilter">ค้นหา Campaign / Action</label><input id="searchFilter" placeholder="พิมพ์ชื่อ Campaign หรือรายละเอียด Action..."/></div><div class="field"><label for="gameFilter">Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div><div class="field"><label for="accountFilter">Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div><div class="field"><label for="statusFilter">สถานะ</label><select id="statusFilter"><option value="">ทั้งหมด</option><option value="CRITICAL">CRITICAL</option><option value="WATCH">WATCH</option><option value="IN_PROGRESS">IN_PROGRESS</option><option value="PENDING_REVIEW">PENDING_REVIEW</option><option value="OUTCOME_READY">OUTCOME_READY</option><option value="CLOSED">CLOSED</option></select></div><button class="button-secondary" id="resetFiltersButton" type="button">รีเซ็ต</button></div></div></section>
+<section class="tab-row" aria-label="Action Center views"><button class="tab-button active" data-tab="decisions" type="button">Needs Action</button><button class="tab-button" data-tab="actions" type="button">Actions & Outcomes</button><button class="tab-button" data-tab="learning" type="button">Learning Patterns</button></section>
+<section class="action-layout" id="decisionsView">
+<article class="panel"><div class="panel-header"><div><h2>ปัญหาที่ควรดำเนินการ</h2><p>มาจาก WATCH / CRITICAL ล่าสุดของ AI Intelligence Builder</p></div><span class="panel-badge" id="decisionResultBadge">0 issues</span></div><div class="action-stack" id="decisionList"><div class="empty-state">รอโหลดข้อมูล</div></div></article>
+<article class="panel form-panel"><div class="panel-header"><div><h2>บันทึก Action</h2><p>เลือกปัญหาด้านซ้าย แล้วระบุสิ่งที่ทีมทำจริง</p></div></div><div class="panel-body"><div class="selected-issue" id="selectedIssue"><strong>ยังไม่ได้เลือกปัญหา</strong><p>กด “บันทึก Action” จากรายการด้านซ้าย</p></div><form id="actionForm"><div class="form-grid-action"><div class="field"><label for="actionType">Action Type</label><select id="actionType" required><option value="">เลือก Action</option><option value="CREATIVE_REFRESH">เปลี่ยน Creative</option><option value="CREATIVE_VARIATION">แตก Creative Variation</option><option value="BUDGET_REDUCE">ลด Spend / Budget</option><option value="BUDGET_INCREASE">เพิ่ม Spend / Budget</option><option value="AUDIENCE_ADJUST">ปรับ Audience</option><option value="PLACEMENT_ADJUST">ปรับ Placement</option><option value="LANDING_PAGE_FIX">แก้ Landing Page</option><option value="TRACKING_CHECK">ตรวจ Tracking</option><option value="CAMPAIGN_RESTRUCTURE">ปรับโครงสร้าง Campaign</option><option value="MONITOR_ONLY">เฝ้าระวังต่อ</option><option value="OTHER">อื่น ๆ</option></select></div><div class="field"><label for="actionDate">วันที่เริ่ม Action</label><input id="actionDate" type="date" required/></div><div class="field full"><label for="actionDetail">สิ่งที่ทีมดำเนินการจริง</label><textarea id="actionDetail" placeholder="เช่น เปลี่ยนจาก Banner 3 เป็น Banner 8 และคง Audience เดิม เพื่อแยกผลของ Creative" required></textarea></div><div class="field"><label for="actionOwner">Owner</label><input id="actionOwner" placeholder="ชื่อผู้รับผิดชอบ"/></div><div class="field"><label for="expectedResult">ผลที่คาดหวัง</label><input id="expectedResult" placeholder="เช่น Cost / Register ลดลงอย่างน้อย 10%"/></div><div class="field full"><label for="userNote">บันทึกเพิ่มเติม</label><textarea id="userNote" placeholder="บริบทที่ข้อมูล Ads ไม่สามารถอธิบายได้ เช่น โปรโมชั่นหรือเหตุการณ์ภายนอก"></textarea></div></div><div class="decision-actions"><button class="button-primary" id="saveActionButton" disabled type="submit">บันทึก Action</button><button class="button-secondary" id="clearSelectionButton" type="button">ล้างการเลือก</button></div><p class="form-message" id="actionMessage" aria-live="polite"></p></form></div></article>
+</section>
+<section class="panel hidden" id="actionsView"><div class="panel-header"><div><h2>Actions & Outcomes</h2><p>Baseline และผลหลัง Action จะถูกประเมินอัตโนมัติที่ 1 / 3 / 7 วัน</p></div><span class="panel-badge" id="actionResultBadge">0 actions</span></div><div class="action-stack" id="actionList"><div class="empty-state">รอโหลดข้อมูล</div></div></section>
+<section class="panel learning-panel hidden" id="learningView"><div class="panel-header"><div><h2>Learning Patterns</h2><p>สถิติจากเคสที่มีผล Review 7 วันแล้ว ใช้เป็นข้อมูลอ้างอิง ไม่ใช่ข้อสรุปเหตุและผลแบบเด็ดขาด</p></div><span class="panel-badge" id="patternResultBadge">0 patterns</span></div><div class="panel-body"><div class="pattern-grid" id="patternGrid"><div class="empty-state">ยังไม่มีเคสที่ครบ 7 วัน</div></div></div></section>
+<footer class="footer-note">AI Marketing Copilot · Action & Outcome Learning · Frontend V5.5.0</footer>
+</main></section></div>
+<script src="../assets/js/config.js?v=5.5.0"></script><script src="../assets/js/auth.js?v=5.5.0"></script><script src="../assets/js/action-center.js?v=5.5.0"></script><script src="../assets/js/sidebar.js?v=5.5.0"></script>
+</body></html>

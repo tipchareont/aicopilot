@@ -14,6 +14,7 @@
   const page = (() => {
     if (path.includes('/creative-weekly/')) return 'creative-weekly';
     if (path.includes('/scale-advisor/')) return 'scale-advisor';
+    if (path.includes('/action-center/')) return 'action-center';
     if (path.includes('/ai-chat/')) return 'ai-chat';
     if (path.includes('/campaign/')) return 'campaign';
     if (path.includes('/creative/')) return 'creative';

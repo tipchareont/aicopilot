@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  APP_VERSION: '5.4.0',
+  APP_VERSION: '5.5.0',
   LOGIN_URL:
     'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/login',
 
@@ -16,5 +16,8 @@ window.APP_CONFIG = {
     'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/chat',
 
   USER_CONTROL_URL:
-    'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/user-control'
+    'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/user-control',
+
+  ACTION_MANAGEMENT_URL:
+    'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/action-management'
 };

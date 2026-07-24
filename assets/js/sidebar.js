@@ -12,6 +12,9 @@
   const cacheKey = `ai_marketing_copilot_workspace_cache_v5_${username}`;
 
   const page = (() => {
+    if (path.includes('/google-overview/')) return 'google-overview';
+    if (path.includes('/google-campaign/')) return 'google-campaign';
+    if (path.includes('/google-insights/')) return 'google-insights';
     if (path.includes('/creative-weekly/')) return 'creative-weekly';
     if (path.includes('/scale-advisor/')) return 'scale-advisor';
     if (path.includes('/action-center/')) return 'action-center';
@@ -22,6 +25,8 @@
     return 'dashboard';
   })();
 
+  const metaPages = new Set(['dashboard', 'campaign', 'creative', 'creative-weekly']);
+  const googlePages = new Set(['google-overview', 'google-campaign', 'google-insights']);
   const dataViews = new Set(['health', 'repair', 'activity']);
   const isDataView = page === 'workspace' && dataViews.has(view);
   const isWorkspace = page === 'workspace';
@@ -80,6 +85,14 @@
   const dataToggle = dataGroup?.querySelector(':scope > .sidebar-nav-toggle');
   const dataSubnav = dataGroup?.querySelector(':scope > .sidebar-subnav');
 
+  const metaGroup = document.querySelector('[data-nav-group="meta-ads"]');
+  const metaToggle = metaGroup?.querySelector(':scope > .sidebar-nav-toggle');
+  const metaSubnav = metaGroup?.querySelector(':scope > .sidebar-subnav');
+
+  const googleGroup = document.querySelector('[data-nav-group="google-ads"]');
+  const googleToggle = googleGroup?.querySelector(':scope > .sidebar-nav-toggle');
+  const googleSubnav = googleGroup?.querySelector(':scope > .sidebar-subnav');
+
   const setGroup = (group, toggle, subnav, expanded, active = false) => {
     if (!group || !toggle || !subnav) return;
     group.classList.toggle('expanded', expanded);
@@ -94,7 +107,6 @@
     const repairLink = document.querySelector('[data-workspace-view="repair"]');
     const activityLink = document.querySelector('[data-workspace-view="activity"]');
 
-    // Hide tools until permission is resolved. This prevents a flash of unauthorized menu items.
     if (healthLink) healthLink.hidden = !permission.known || !permission.canHealth;
     if (repairLink) repairLink.hidden = !permission.known || !permission.canRepair;
     if (activityLink) activityLink.hidden = !permission.known || !permission.canRepair;
@@ -102,14 +114,14 @@
     const hasVisibleTool = permission.known && (permission.canHealth || permission.canRepair);
     if (dataGroup) dataGroup.hidden = !hasVisibleTool;
 
-    if (!hasVisibleTool) {
-      setGroup(dataGroup, dataToggle, dataSubnav, false, false);
-    }
+    if (!hasVisibleTool) setGroup(dataGroup, dataToggle, dataSubnav, false, false);
 
     return permission;
   };
 
   const permission = applyToolVisibility();
+  setGroup(metaGroup, metaToggle, metaSubnav, metaPages.has(page), metaPages.has(page));
+  setGroup(googleGroup, googleToggle, googleSubnav, googlePages.has(page), googlePages.has(page));
   setGroup(workspaceGroup, workspaceToggle, workspaceSubnav, isWorkspace, isWorkspace);
   setGroup(
     dataGroup,
@@ -118,6 +130,16 @@
     Boolean(permission.known && isDataView && !dataGroup?.hidden),
     Boolean(permission.known && isDataView && !dataGroup?.hidden)
   );
+
+  metaToggle?.addEventListener('click', () => {
+    const next = metaToggle.getAttribute('aria-expanded') !== 'true';
+    setGroup(metaGroup, metaToggle, metaSubnav, next, metaPages.has(page));
+  });
+
+  googleToggle?.addEventListener('click', () => {
+    const next = googleToggle.getAttribute('aria-expanded') !== 'true';
+    setGroup(googleGroup, googleToggle, googleSubnav, next, googlePages.has(page));
+  });
 
   workspaceToggle?.addEventListener('click', () => {
     const next = workspaceToggle.getAttribute('aria-expanded') !== 'true';

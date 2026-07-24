@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Ads Overview | AI Marketing Copilot</title>
+  <meta name="description" content="Mockup หน้ารายงาน Google Ads สำหรับ PMax และ Search" />
+  <link rel="stylesheet" href="../assets/css/app.css?v=5.6.0" />
+  <style>
+    :root{--bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;--primary:#2563eb;--primary-soft:#eff6ff;--success:#15803d;--success-soft:#f0fdf4;--warning:#b45309;--warning-soft:#fffbeb;--danger:#b91c1c;--danger-soft:#fef2f2;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text)} .main{display:flex;flex-direction:column;min-height:100vh}
+    .topbar{gap:20px}.topbar-title h1,.topbar-title p{margin:0}.topbar-title p{margin-top:4px;color:var(--muted)}.topbar-actions,.user-box{display:flex;align-items:center;gap:12px}.user-meta{display:grid;gap:2px;text-align:right}.user-meta span{color:var(--muted);font-size:12px}.button-secondary,.button-primary{border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}.button-secondary{border:1px solid var(--border);background:var(--surface);color:var(--text)}.button-primary{border:1px solid var(--primary);background:var(--primary);color:#fff}
+    .content{max-width:1440px;width:100%;padding:28px;display:grid;gap:18px}.panel,.kpi-card,.filter-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+    .filter-panel{padding:18px 20px;display:grid;gap:14px}.filter-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.filter-top h2,.filter-top p{margin:0}.filter-top p{margin-top:4px;color:var(--muted);font-size:13px}.filters{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:700;color:#475569}.field select{padding:11px 12px;border:1px solid #cfd7e3;border-radius:10px;background:#fff}
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.kpi-card{padding:18px}.kpi-label{font-size:13px;color:var(--muted)}.kpi-card strong{display:block;margin-top:10px;font-size:30px}.kpi-sub{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
+    .dashboard-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.panel-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--border)}.panel-header h3,.panel-header p{margin:0}.panel-header p{margin-top:4px;color:var(--muted);font-size:13px}.panel-badge{padding:7px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:700}.panel-body{padding:18px 20px}
+    .data-table{width:100%;border-collapse:collapse;font-size:13px}.data-table th,.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.data-table th{background:#f8fafc;color:#475569}.table-wrap{overflow:auto}.table-empty{text-align:center;color:var(--muted)}
+    .action-list{display:grid;gap:10px}.action-card{padding:13px;border-radius:14px;border:1px solid var(--border);background:#fafcff}.action-card[data-level="high"]{border-color:#fecaca;background:var(--danger-soft)}.action-card[data-level="medium"]{border-color:#fde68a;background:var(--warning-soft)}.action-card[data-level="good"]{border-color:#bbf7d0;background:var(--success-soft)}.action-head{display:flex;justify-content:space-between;gap:12px}.action-tag{font-size:10px;font-weight:800;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.8)}.action-card p{margin:7px 0 0;color:#475569;font-size:12px;line-height:1.65}.footer-note{padding:0 4px 20px;color:var(--muted);font-size:12px;text-align:center}
+    @media(max-width:1080px){.dashboard-grid,.filters,.kpi-grid{grid-template-columns:1fr}} 
+  </style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Paid Media</div>
+      <div class="sidebar-nav-group" data-nav-group="meta-ads">
+        <button aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>Meta Ads</span><span class="sidebar-chevron">⌃</span></button>
+        <div class="sidebar-subnav sidebar-platform-subnav" hidden>
+          <a data-nav-page="dashboard" href="../dashboard/index.html"><span>Dashboard</span></a>
+          <a data-nav-page="campaign" href="../campaign/index.html"><span>Campaign</span></a>
+          <a data-nav-page="creative" href="../creative/index.html"><span>Creative</span></a>
+          <a data-nav-page="creative-weekly" href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
+        </div>
+      </div>
+      <div class="sidebar-nav-group" data-nav-group="google-ads">
+        <button aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>Google Ads</span><span class="sidebar-chevron">⌃</span></button>
+        <div class="sidebar-subnav sidebar-platform-subnav" hidden>
+          <a data-nav-page="google-overview" href="../google-overview/index.html"><span>Overview</span></a>
+          <a data-nav-page="google-campaign" href="../google-campaign/index.html"><span>Campaign</span></a>
+          <a data-nav-page="google-insights" href="../google-insights/index.html"><span>Asset &amp; Search Insights</span></a>
+        </div>
+      </div>
+      <div class="sidebar-section-label">Intelligence</div>
+      <a data-nav-page="scale-advisor" href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
+      <a data-nav-page="action-center" href="../action-center/index.html"><span>Action Center</span></a>
+      <a data-nav-page="ai-chat" href="../ai-chat/index.html"><span>AI Chat</span></a>
+      <div class="sidebar-section-label">Workspace</div>
+      <div class="sidebar-nav-group sidebar-workspace-group" data-nav-group="workspace">
+        <button aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>My Workspace</span><span class="sidebar-chevron">⌃</span></button>
+        <div class="sidebar-subnav sidebar-workspace-subnav" hidden>
+          <a data-nav-page="workspace" href="../workspace/index.html"><span>Profile &amp; My Access</span></a>
+          <div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management">
+            <button aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button"><span>Data Management</span><span class="sidebar-chevron">⌃</span></button>
+            <div class="sidebar-subnav sidebar-subnav-nested" hidden>
+              <a data-workspace-view="health" hidden href="../workspace/index.html?view=health"><span>Data Health</span></a>
+              <a data-workspace-view="repair" hidden href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
+              <a data-workspace-view="activity" hidden href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">Multi-Channel Ads · Meta / Google Ready</div>
+  </aside>
+  <section class="main">
+    <header class="topbar">
+      <div class="topbar-title"><h1>Google Ads Overview</h1><p>Mockup สำหรับรายงานหลักของ PMax และ Search โดยคุมให้พร้อมต่อ Backend ภายหลัง</p></div>
+      <div class="topbar-actions"><button class="button-primary" type="button">Google Ads Mockup</button><div class="user-box"><div class="user-meta"><strong id="displayName">Administrator</strong><span id="role">ADMIN</span></div><button class="button-secondary" id="logoutButton" type="button">Logout</button></div></div>
+    </header>
+    <main class="content">
+      <section class="filter-panel">
+        <div class="filter-top"><div><h2>Overall Performance</h2><p>มุมมองที่เหมาะกับบัญชีที่เน้น Search และ PMax เป็นหลัก</p></div><div class="panel-badge" id="updatedAt">รอข้อมูล</div></div>
+        <div class="filters">
+          <div class="field"><label for="gameFilter">Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
+          <div class="field"><label for="accountFilter">Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+          <div class="field"><label for="typeFilter">Campaign Type</label><select id="typeFilter"><option value="">ทั้งหมด</option></select></div>
+        </div>
+      </section>
+
+      <section class="kpi-grid">
+        <article class="kpi-card"><span class="kpi-label">Spend</span><strong id="spendKpi">-</strong><span class="kpi-sub">ค่าใช้จ่ายรวมของชุดข้อมูลที่เลือก</span></article>
+        <article class="kpi-card"><span class="kpi-label">Conversions</span><strong id="convKpi">-</strong><span class="kpi-sub">เหมาะใช้เป็น KPI หลักของ Google Ads</span></article>
+        <article class="kpi-card"><span class="kpi-label">CPA</span><strong id="cpaKpi">-</strong><span class="kpi-sub">Cost per Conversion ภาพรวม</span></article>
+        <article class="kpi-card"><span class="kpi-label">Clicks</span><strong id="clickKpi">-</strong><span class="kpi-sub">Volume ที่เกิดขึ้นทั้งหมด</span></article>
+        <article class="kpi-card"><span class="kpi-label">CTR</span><strong id="ctrKpi">-</strong><span class="kpi-sub">เหมาะกับมุม Search และคุณภาพข้อความโฆษณา</span></article>
+        <article class="kpi-card"><span class="kpi-label">Avg CPC</span><strong id="avgCpcKpi">-</strong><span class="kpi-sub">ใช้จับต้นทุนต่อคลิกที่เริ่มแพงเกินไป</span></article>
+        <article class="kpi-card"><span class="kpi-label">PMax Campaigns</span><strong id="pmaxCount">-</strong><span class="kpi-sub">จำนวนแคมเปญ PMax ในชุดข้อมูล</span></article>
+        <article class="kpi-card"><span class="kpi-label">Search Campaigns</span><strong id="searchCount">-</strong><span class="kpi-sub">จำนวนแคมเปญ Search ในชุดข้อมูล</span></article>
+        <article class="kpi-card"><span class="kpi-label">ROAS</span><strong id="roasKpi">-</strong><span class="kpi-sub">เตรียมเผื่ออนาคต ถ้ามี Conversion Value</span></article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel">
+          <div class="panel-header"><div><h3>Channel Mix</h3><p>ดูภาพรวมแยก Search vs PMax เพื่อคุยกับทีมได้ง่าย</p></div><span class="panel-badge">Backend-friendly block</span></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table"><thead><tr><th>Channel</th><th>Spend</th><th>Conversions</th><th>CPA</th><th>CTR</th></tr></thead><tbody id="channelMixBody"></tbody></table>
+          </div>
+        </article>
+        <aside class="panel">
+          <div class="panel-header"><div><h3>What to Watch</h3><p>สรุปสิ่งที่ผู้ใช้ควรเห็นเร็วที่สุด</p></div></div>
+          <div class="panel-body"><div class="action-list" id="alertList"></div></div>
+        </aside>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel">
+          <div class="panel-header"><div><h3>7-Day Trend Snapshot</h3><p>Mockup แบบอ่านเร็ว ไม่ต้องจมกับกราฟตั้งแต่รอบแรก</p></div></div>
+          <div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Spend</th><th>Conversions</th><th>CPA</th></tr></thead><tbody id="trendBody"></tbody></table></div>
+        </article>
+        <article class="panel">
+          <div class="panel-header"><div><h3>Why this report works for Google Ads</h3><p>แนวคิด report ที่เหมาะกับ PMax + Search</p></div></div>
+          <div class="panel-body">
+            <div class="action-list">
+              <article class="action-card" data-level="good"><div class="action-head"><strong>1. Overall Efficiency</strong></div><p>โฟกัส Spend, Conversions, CPA, CTR, Avg CPC และ ROAS ก่อน เพราะเป็น metric ที่ทีมใช้งานจริงทุกวัน</p></article>
+              <article class="action-card" data-level="medium"><div class="action-head"><strong>2. Channel Split</strong></div><p>แยก Search กับ PMax ชัดเจน เพราะ logic วิเคราะห์ไม่เหมือนกัน และช่วยให้ feedback กับทีมซื้อสื่อเร็วขึ้น</p></article>
+              <article class="action-card" data-level="high"><div class="action-head"><strong>3. Search / Asset Insight</strong></div><p>Search ต้องดู Search Terms + Impression Share ส่วน PMax ต้องดู Asset Group และ Creative Strength</p></article>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <article class="panel">
+        <div class="panel-header"><div><h3>Campaign Snapshot</h3><p>ตารางหลักที่ควรให้ Manager เปิดแล้วอ่านได้ทันที</p></div><span class="panel-badge">Top campaigns</span></div>
+        <div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Campaign</th><th>Game</th><th>Account</th><th>Type</th><th>Spend</th><th>Conversions</th><th>CPA</th><th>Insight</th></tr></thead><tbody id="campaignBody"></tbody></table></div>
+      </article>
+      <footer class="footer-note">AI Marketing Copilot · Google Ads Frontend Mockup · Ready for Backend Integration</footer>
+    </main>
+  </section>
+</div>
+<script src="../assets/js/config.js?v=5.6.0"></script>
+<script src="../assets/js/auth.js?v=5.6.0"></script>
+<script src="../assets/js/sidebar.js?v=5.6.0"></script>
+<script src="../assets/js/google-mock-data.js?v=5.6.0"></script>
+<script src="../assets/js/google-common.js?v=5.6.0"></script>
+<script src="../assets/js/google-overview.js?v=5.6.0"></script>
+</body>
+</html>

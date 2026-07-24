@@ -19,27 +19,37 @@
 <div class="shell hidden" id="shell">
 <aside class="sidebar">
 <div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div>
-<nav aria-label="Main navigation" class="sidebar-nav">
+<nav class="sidebar-nav">
+<div class="sidebar-section-label">Paid Media</div>
+<div class="sidebar-nav-group" data-nav-group="meta-ads">
+<button aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>Meta Ads</span><span class="sidebar-chevron">⌃</span></button>
+<div class="sidebar-subnav sidebar-platform-subnav" hidden>
 <a data-nav-page="dashboard" href="../dashboard/index.html"><span>Dashboard</span></a>
 <a data-nav-page="campaign" href="../campaign/index.html"><span>Campaign</span></a>
 <a data-nav-page="creative" href="../creative/index.html"><span>Creative</span></a>
 <a data-nav-page="creative-weekly" href="../creative-weekly/index.html"><span>Creative Weekly</span></a>
+</div>
+</div>
+<div class="sidebar-nav-group" data-nav-group="google-ads">
+<button aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>Google Ads</span><span class="sidebar-chevron">⌃</span></button>
+<div class="sidebar-subnav sidebar-platform-subnav" hidden>
+<a data-nav-page="google-overview" href="../google-overview/index.html"><span>Overview</span></a>
+<a data-nav-page="google-campaign" href="../google-campaign/index.html"><span>Campaign</span></a>
+<a data-nav-page="google-insights" href="../google-insights/index.html"><span>Asset &amp; Search Insights</span></a>
+</div>
+</div>
+<div class="sidebar-section-label">Intelligence</div>
 <a data-nav-page="scale-advisor" href="../scale-advisor/index.html"><span>Scale Advisor</span></a>
 <a data-nav-page="action-center" href="../action-center/index.html"><span>Action Center</span></a>
 <a data-nav-page="ai-chat" href="../ai-chat/index.html"><span>AI Chat</span></a>
+<div class="sidebar-section-label">Workspace</div>
 <div class="sidebar-nav-group sidebar-workspace-group" data-nav-group="workspace">
-<button aria-controls="workspaceSubnav" aria-expanded="false" class="sidebar-nav-toggle" type="button">
-<span>My Workspace</span>
-<span aria-hidden="true" class="sidebar-chevron">⌄</span>
-</button>
-<div class="sidebar-subnav sidebar-workspace-subnav" hidden id="workspaceSubnav">
+<button aria-expanded="false" class="sidebar-nav-toggle" type="button"><span>My Workspace</span><span class="sidebar-chevron">⌃</span></button>
+<div class="sidebar-subnav sidebar-workspace-subnav" hidden>
 <a data-nav-page="workspace" href="../workspace/index.html"><span>Profile &amp; My Access</span></a>
-<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management" hidden>
-<button aria-controls="dataManagementSubnav" aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button">
-<span>Data Management</span>
-<span aria-hidden="true" class="sidebar-chevron">⌄</span>
-</button>
-<div class="sidebar-subnav sidebar-subnav-nested" hidden id="dataManagementSubnav">
+<div class="sidebar-nav-group sidebar-nav-nested" data-nav-group="data-management">
+<button aria-expanded="false" class="sidebar-nav-toggle sidebar-nav-toggle-nested" type="button"><span>Data Management</span><span class="sidebar-chevron">⌃</span></button>
+<div class="sidebar-subnav sidebar-subnav-nested" hidden>
 <a data-workspace-view="health" hidden href="../workspace/index.html?view=health"><span>Data Health</span></a>
 <a data-workspace-view="repair" hidden href="../workspace/index.html?view=repair"><span>Data Repair</span></a>
 <a data-workspace-view="activity" hidden href="../workspace/index.html?view=activity"><span>Repair Activity</span></a>
@@ -48,7 +58,7 @@
 </div>
 </div>
 </nav>
-<div class="sidebar-footer">Recommendation Only · No Auto Scale</div>
+<div class="sidebar-footer">Multi-Channel Ads · Meta / Google Ready</div>
 </aside>
 <section class="main">
 <header class="topbar">

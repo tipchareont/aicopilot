@@ -14,3 +14,9 @@
 .sidebar-subnav-nested{padding-left:14px}
 .sidebar-subnav-nested a{padding:9px 10px 9px 20px!important;font-size:12px!important}
 .sidebar-nav-nested.active>.sidebar-nav-toggle-nested{color:#fff;background:rgba(255,255,255,.06)}
+
+/* Multi-channel sidebar V5.6.0 */
+.sidebar-section-label{margin:12px 2px 2px;padding:0 10px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#64748b}
+.sidebar-platform-subnav{padding-left:12px}
+.sidebar-platform-subnav a{font-size:13px}
+.sidebar-footer{margin-top:auto;padding-top:24px;font-size:12px;opacity:.66}

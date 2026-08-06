@@ -8,19 +8,21 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 2;
-  const cacheKey = () => `ai_marketing_copilot_action_center_v2_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const CACHE_VERSION = 4;
+  const cacheKey = () => `ai_marketing_copilot_action_center_v4_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
   function readCache(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||'null');return Number(x?.version||0)===CACHE_VERSION&&x?.data?x:null}catch{return null}}
-  function saveCache(data){try{localStorage.setItem(cacheKey(),JSON.stringify({version:CACHE_VERSION,saved_at:Date.now(),data}))}catch{}}
+  function clearLegacyCaches(){try{for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i)||'';if(key.startsWith('ai_marketing_copilot_action_center_')&&key!==cacheKey())localStorage.removeItem(key);}}catch{}}
+  function saveCache(data){try{clearLegacyCaches();localStorage.setItem(cacheKey(),JSON.stringify({version:CACHE_VERSION,saved_at:Date.now(),data}))}catch{}}
   function showApp(){ $('loading').classList.add('hidden'); $('shell').classList.remove('hidden'); }
   function setUser(){ $('displayName').textContent=localStorage.getItem('display_name')||localStorage.getItem('username')||'-'; $('role').textContent=localStorage.getItem('role')||'-'; $('actionOwner').value=localStorage.getItem('display_name')||localStorage.getItem('username')||''; }
 
   async function request(payload){
     const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),45000);
     try{
-      const response=await fetch(window.APP_CONFIG.ACTION_MANAGEMENT_URL,{method:'POST',headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},cache:'no-store',body:JSON.stringify({session_token:window.Auth.token(),...payload}),signal:controller.signal});
+      const baseUrl=window.APP_CONFIG.ACTION_MANAGEMENT_URL; const requestUrl=`${baseUrl}${baseUrl.includes('?')?'&':'?'}_ts=${Date.now()}`;
+      const response=await fetch(requestUrl,{method:'POST',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({session_token:window.Auth.token(),...payload}),signal:controller.signal});
       let data=null; try{data=await response.json()}catch{}
       if(response.status===401){window.Auth.redirectToLogin();throw new Error('Session หมดอายุ')}
       if(!response.ok||data?.success===false)throw new Error(data?.message||`Action API Error (${response.status})`);
@@ -56,6 +58,7 @@
     const refreshButton=$('refreshButton');
     const previousButtonText=refreshButton?.textContent||'รีเฟรชข้อมูล';
     let cacheVisible=false;
+    if(refresh){try{localStorage.removeItem(cacheKey());}catch{}}
     if(refreshButton){refreshButton.disabled=true;refreshButton.textContent=refresh?'กำลังรีเฟรช...':'กำลังอัปเดต...';}
     $('loadingMessage').textContent=refresh?'กำลังรีเฟรช Action Center...':'กำลังโหลด Action Center...';
     try{
@@ -69,10 +72,11 @@
         }
       }
       const data=await request({action:'GET_ACTION_CENTER',cache_bust:Date.now()});
+      if(!Array.isArray(data?.actions)||!Array.isArray(data?.decisions))throw new Error('Action API ส่งข้อมูลไม่ครบ');
       state.data=data;
       saveCache(data);
       const generatedAt=data.generated_at?new Date(data.generated_at):new Date();
-      $('cacheUpdatedAt').textContent=`Updated: ${generatedAt.toLocaleString('th-TH')}`;
+      $('cacheUpdatedAt').textContent=`Updated: ${generatedAt.toLocaleString('th-TH')} · ${clean(data.action_data_source||'API')} · ${num(data.action_row_count ?? data.actions.length)} actions`;
       prepareFilters();render();setUser();showApp();
     }catch(e){
       if(cacheVisible||state.data){

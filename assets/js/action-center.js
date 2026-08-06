@@ -8,8 +8,8 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 4;
-  const cacheKey = () => `ai_marketing_copilot_action_center_v4_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const CACHE_VERSION = 5;
+  const cacheKey = () => `ai_marketing_copilot_action_center_v5_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
   function readCache(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||'null');return Number(x?.version||0)===CACHE_VERSION&&x?.data?x:null}catch{return null}}
@@ -168,15 +168,105 @@
   function actionCard(row){
     const status=upper(row.Action_Status),outcome=upper(row.Outcome_Status||'PENDING');
     const review1=reviewData(row,1),review3=reviewData(row,3),review7=reviewData(row,7);
-    return `<article class="action-card"><div class="action-head"><div class="action-title"><h3>${esc(row.Entity_Name||'-')}</h3><p>${esc(actionTypeLabel(row.Action_Type))} · ผู้รับผิดชอบ: ${esc(row.Owner||'-')} · เริ่ม ${dateText(row.Action_Date)}</p></div><div class="badge-row"><span class="action-status ${statusClass(status)}">${esc(statusLabel(status))}</span><span class="outcome-badge ${statusClass(outcome)}">${esc(statusLabel(outcome))}</span></div></div><div class="action-context"><div class="action-context-main"><span>สิ่งที่ทีมดำเนินการ</span><strong>${esc(row.Action_Detail||'-')}</strong></div><div class="baseline-grid"><div><span>ตัวชี้วัดก่อนทำ</span><strong>${esc(metricLabel(row.Baseline_Metric))} ${hasValue(row.Baseline_Value)?num(row.Baseline_Value,2):'-'}</strong></div><div><span>ข้อมูลช่วง Baseline</span><strong>Spend ${money(row.Baseline_Spend||0)} · Results ${num(row.Baseline_Results||0)}</strong></div></div></div><div class="checkpoint-section"><div class="section-label">ผลตามช่วงเวลาหลังทำ Action</div><div class="action-progress">${checkpoint('หลัง 1 วัน',row.Baseline_Metric,review1)}${checkpoint('หลัง 3 วัน',row.Baseline_Metric,review3)}${checkpoint('หลัง 7 วัน',row.Baseline_Metric,review7)}</div></div>${outcomeSummary(row)}<div class="action-meta"><span>${esc(row.Game_Name||row.Game_ID)}</span><span>${esc(row.Account_Name||row.Account_ID)}</span><span>${esc(row.Objective)}</span><span>${esc(row.Issue_Type)}</span></div><div class="action-actions">${['PLANNED'].includes(status)?`<button class="button-primary" data-update="${esc(row.Action_ID)}" data-status="IN_PROGRESS" type="button">เริ่มดำเนินการ</button>`:''}${['OUTCOME_READY'].includes(status)?`<button class="button-primary" data-update="${esc(row.Action_ID)}" data-status="CLOSED" type="button">ตรวจผลแล้วและปิด Action</button>`:''}${!['CLOSED','CANCELLED','DISMISSED'].includes(status)?`<button class="button-secondary" data-update="${esc(row.Action_ID)}" data-status="CANCELLED" type="button">ยกเลิก Action</button>`:''}</div></article>`;
+    const isClosed=status==='CLOSED';
+    const actionButtons=[
+      ...(['PLANNED'].includes(status)?[`<button class="button-primary" data-update="${esc(row.Action_ID)}" data-status="IN_PROGRESS" type="button">เริ่มดำเนินการ</button>`]:[]),
+      ...(['OUTCOME_READY'].includes(status)?[`<button class="button-primary" data-update="${esc(row.Action_ID)}" data-status="CLOSED" type="button">ตรวจผลแล้วและปิด Action</button>`]:[]),
+      ...(!['CLOSED','CANCELLED','DISMISSED'].includes(status)?[`<button class="button-secondary" data-update="${esc(row.Action_ID)}" data-status="CANCELLED" type="button">ยกเลิก Action</button>`]:[])
+    ].join('');
+    const dropdownLabel=isClosed?'ดูรายละเอียด Action ที่ปิดแล้ว':'ดูรายละเอียดและผลลัพธ์';
+    return `<article class="action-card${isClosed?' is-closed':''}">
+      <div class="action-head">
+        <div class="action-title">
+          <h3>${esc(row.Entity_Name||'-')}</h3>
+          <p>${esc(actionTypeLabel(row.Action_Type))} · ผู้รับผิดชอบ: ${esc(row.Owner||'-')} · เริ่ม ${dateText(row.Action_Date)}</p>
+        </div>
+        <div class="badge-row">
+          <span class="action-status ${statusClass(status)}">${esc(statusLabel(status))}</span>
+          <span class="outcome-badge ${statusClass(outcome)}">${esc(statusLabel(outcome))}</span>
+        </div>
+      </div>
+      <details class="action-details">
+        <summary>
+          <span>${esc(dropdownLabel)}</span>
+          <span class="action-details-chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="action-details-body">
+          <div class="action-context">
+            <div class="action-context-main">
+              <span>สิ่งที่ทีมดำเนินการ</span>
+              <strong>${esc(row.Action_Detail||'-')}</strong>
+            </div>
+            <div class="baseline-grid">
+              <div><span>ตัวชี้วัดก่อนทำ</span><strong>${esc(metricLabel(row.Baseline_Metric))} ${hasValue(row.Baseline_Value)?num(row.Baseline_Value,2):'-'}</strong></div>
+              <div><span>ข้อมูลช่วง Baseline</span><strong>Spend ${money(row.Baseline_Spend||0)} · Results ${num(row.Baseline_Results||0)}</strong></div>
+            </div>
+          </div>
+          <div class="checkpoint-section">
+            <div class="section-label">ผลตามช่วงเวลาหลังทำ Action</div>
+            <div class="action-progress">
+              ${checkpoint('หลัง 1 วัน',row.Baseline_Metric,review1)}
+              ${checkpoint('หลัง 3 วัน',row.Baseline_Metric,review3)}
+              ${checkpoint('หลัง 7 วัน',row.Baseline_Metric,review7)}
+            </div>
+          </div>
+          ${outcomeSummary(row)}
+          <div class="action-meta">
+            <span>${esc(row.Game_Name||row.Game_ID)}</span>
+            <span>${esc(row.Account_Name||row.Account_ID)}</span>
+            <span>${esc(row.Objective)}</span>
+            <span>${esc(row.Issue_Type)}</span>
+          </div>
+          ${actionButtons?`<div class="action-actions">${actionButtons}</div>`:''}
+        </div>
+      </details>
+    </article>`;
   }
 
   function patternCard(row){return `<article class="pattern-card"><strong>${esc(actionTypeLabel(row.Action_Type))} · ${esc(row.Issue_Type)}</strong><span>${esc(row.Objective)} · ตัวอย่าง ${num(row.Sample_Size)} เคส</span><span>ผลดีขึ้น ${num(row.Improved_Count)} เคส · อัตราสำเร็จ ${num(row.Success_Rate_Pct,1)}%</span><span>การเปลี่ยนแปลงเฉลี่ย ${num(row.Average_Change_Pct,2)}%</span></article>`;}
 
   function filteredDecisions(){const q=upper($('searchFilter').value),g=$('gameFilter').value,a=$('accountFilter').value,s=upper($('statusFilter').value);return (state.data?.decisions||[]).filter(r=>(!q||upper(`${r.Entity_Name} ${r.Issue_Reason}`).includes(q))&&(!g||(r.Game_Name||r.Game_ID)===g)&&(!a||(r.Account_Name||r.Account_ID)===a)&&(!s||upper(r.Issue_Status)===s));}
-  function filteredActions(){const q=upper($('searchFilter').value),g=$('gameFilter').value,a=$('accountFilter').value,s=upper($('statusFilter').value);return (state.data?.actions||[]).filter(r=>(!q||upper(`${r.Entity_Name} ${r.Action_Detail}`).includes(q))&&(!g||(r.Game_Name||r.Game_ID)===g)&&(!a||(r.Account_Name||r.Account_ID)===a)&&(!s||upper(r.Action_Status)===s||upper(r.Outcome_Status)===s));}
+  function actionMatchesFilters(r){const q=upper($('searchFilter').value),g=$('gameFilter').value,a=$('accountFilter').value,s=upper($('statusFilter').value);return (!q||upper(`${r.Entity_Name} ${r.Action_Detail}`).includes(q))&&(!g||(r.Game_Name||r.Game_ID)===g)&&(!a||(r.Account_Name||r.Account_ID)===a)&&(!s||upper(r.Action_Status)===s||upper(r.Outcome_Status)===s);}
+  function filteredActions(){return (state.data?.actions||[]).filter(r=>upper(r.Action_Status)!=='CLOSED'&&actionMatchesFilters(r));}
+  function filteredClosedActions(){return (state.data?.actions||[]).filter(r=>upper(r.Action_Status)==='CLOSED'&&actionMatchesFilters(r));}
 
-  function render(){const d=state.data||{},summary=d.summary||{};$('needsActionCount').textContent=num(summary.needs_action);$('inProgressCount').textContent=num(summary.in_progress);$('outcomeReadyCount').textContent=num(summary.outcome_ready);$('improvedCount').textContent=num(summary.improved);$('totalActionCount').textContent=num(summary.total_actions);$('dataDateBadge').textContent=`Data: ${d.data_date||'-'}`;const decisions=filteredDecisions(),actions=filteredActions(),patterns=d.learning_patterns||[];$('decisionResultBadge').textContent=`${num(decisions.length)} ปัญหา`;$('actionResultBadge').textContent=`${num(actions.length)} รายการ`;$('patternResultBadge').textContent=`${num(patterns.length)} รูปแบบ`;$('decisionList').innerHTML=decisions.length?decisions.map(decisionCard).join(''):'<div class="empty-state">ไม่มีปัญหาที่ตรงกับตัวกรอง</div>';$('actionList').innerHTML=actions.length?actions.map(actionCard).join(''):'<div class="empty-state">ยังไม่มี Action ที่บันทึกไว้</div>';$('patternGrid').innerHTML=patterns.length?patterns.map(patternCard).join(''):'<div class="empty-state">ยังไม่มี Action ที่ครบ Review 7 วัน</div>';bindDynamic();}
+  function render(){
+    const d=state.data||{},summary=d.summary||{};
+    $('needsActionCount').textContent=num(summary.needs_action);
+    $('inProgressCount').textContent=num(summary.in_progress);
+    $('outcomeReadyCount').textContent=num(summary.outcome_ready);
+    $('improvedCount').textContent=num(summary.improved);
+    $('totalActionCount').textContent=num(summary.total_actions);
+    $('dataDateBadge').textContent=`Data: ${d.data_date||'-'}`;
+
+    const decisions=filteredDecisions();
+    const actions=filteredActions();
+    const closedActions=filteredClosedActions();
+    const patterns=d.learning_patterns||[];
+
+    $('decisionResultBadge').textContent=`${num(decisions.length)} ปัญหา`;
+    $('actionResultBadge').textContent=`${num(actions.length)} รายการ`;
+    $('closedActionResultBadge').textContent=`${num(closedActions.length)} รายการ`;
+    $('patternResultBadge').textContent=`${num(patterns.length)} รูปแบบ`;
+
+    $('decisionList').innerHTML=decisions.length
+      ?decisions.map(decisionCard).join('')
+      :'<div class="empty-state">ไม่มีปัญหาที่ตรงกับตัวกรอง</div>';
+
+    $('actionList').innerHTML=actions.length
+      ?actions.map(actionCard).join('')
+      :'<div class="empty-state">ไม่มี Action ที่กำลังติดตามหรือรอตรวจผล</div>';
+
+    $('closedActionList').innerHTML=closedActions.length
+      ?closedActions.map(actionCard).join('')
+      :'<div class="empty-state">ยังไม่มี Action ที่ปิดแล้ว</div>';
+
+    $('patternGrid').innerHTML=patterns.length
+      ?patterns.map(patternCard).join('')
+      :'<div class="empty-state">ยังไม่มี Action ที่ครบ Review 7 วัน</div>';
+
+    bindDynamic();
+  }
   function bindDynamic(){document.querySelectorAll('[data-record]').forEach(b=>b.addEventListener('click',()=>selectDecision(b.dataset.record)));document.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',()=>dismissDecision(b.dataset.dismiss)));document.querySelectorAll('[data-update]').forEach(b=>b.addEventListener('click',()=>updateAction(b.dataset.update,b.dataset.status)));}
   function selectDecision(key){const row=(state.data?.decisions||[]).find(r=>r.Decision_Key===key);if(!row)return;state.selected=row;$('selectedIssue').innerHTML=`<strong>${esc(row.Entity_Name)}</strong><p>${esc(row.Issue_Status)} · ${esc(row.Issue_Reason)}</p>`;$('actionDate').value=todayBangkok();$('saveActionButton').disabled=!row.can_manage;$('actionMessage').textContent='';window.scrollTo({top:document.body.scrollHeight/4,behavior:'smooth'});}
   function clearSelection(){state.selected=null;$('selectedIssue').innerHTML='<strong>ยังไม่ได้เลือกปัญหา</strong><p>กด “บันทึก Action” จากรายการด้านซ้าย</p>';$('actionForm').reset();$('actionOwner').value=localStorage.getItem('display_name')||localStorage.getItem('username')||'';$('saveActionButton').disabled=true;$('actionMessage').textContent='';}
@@ -186,7 +276,7 @@
   async function dismissDecision(key){const row=(state.data?.decisions||[]).find(d=>d.Decision_Key===key);if(!row||!confirm(`เลือกไม่ดำเนินการกับปัญหา “${row.Entity_Name}” ใช่หรือไม่?`))return;try{const r=await request({action:'DISMISS_DECISION',decision_key:key,game_id:row.Game_ID,account_id:row.Account_ID,dismiss_reason:'ทีมตรวจสอบแล้วและเลือกไม่ดำเนินการในรอบนี้'});applyMutation(r.action);}catch(e){alert(e.message)}}
   async function updateAction(id,status){if(!confirm(`เปลี่ยนสถานะ Action เป็น “${statusLabel(status)}” ใช่หรือไม่?`))return;try{const r=await request({action:'UPDATE_ACTION',action_id:id,action_status:status});applyMutation(r.action);}catch(e){alert(e.message)}}
 
-  function setTab(tab){state.tab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('decisionsView').classList.toggle('hidden',tab!=='decisions');$('actionsView').classList.toggle('hidden',tab!=='actions');$('learningView').classList.toggle('hidden',tab!=='learning');}
+  function setTab(tab){state.tab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('decisionsView').classList.toggle('hidden',tab!=='decisions');$('actionsView').classList.toggle('hidden',tab!=='actions');$('closedActionsView').classList.toggle('hidden',tab!=='closed');$('learningView').classList.toggle('hidden',tab!=='learning');}
   async function load(refresh=false){
     if(state.loading)return;
     state.loading=true;

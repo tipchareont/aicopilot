@@ -8,8 +8,8 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 1;
-  const cacheKey = () => `ai_marketing_copilot_action_center_v1_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const CACHE_VERSION = 2;
+  const cacheKey = () => `ai_marketing_copilot_action_center_v2_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
   function readCache(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||'null');return Number(x?.version||0)===CACHE_VERSION&&x?.data?x:null}catch{return null}}
@@ -20,7 +20,7 @@
   async function request(payload){
     const controller=new AbortController(); const timeout=setTimeout(()=>controller.abort(),45000);
     try{
-      const response=await fetch(window.APP_CONFIG.ACTION_MANAGEMENT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_token:window.Auth.token(),...payload}),signal:controller.signal});
+      const response=await fetch(window.APP_CONFIG.ACTION_MANAGEMENT_URL,{method:'POST',headers:{'Content-Type':'application/json','Cache-Control':'no-cache'},cache:'no-store',body:JSON.stringify({session_token:window.Auth.token(),...payload}),signal:controller.signal});
       let data=null; try{data=await response.json()}catch{}
       if(response.status===401){window.Auth.redirectToLogin();throw new Error('Session หมดอายุ')}
       if(!response.ok||data?.success===false)throw new Error(data?.message||`Action API Error (${response.status})`);
@@ -50,7 +50,42 @@
   async function updateAction(id,status){if(!confirm(`เปลี่ยนสถานะ Action เป็น ${status} ใช่หรือไม่?`))return;try{const r=await request({action:'UPDATE_ACTION',action_id:id,action_status:status});applyMutation(r.action);}catch(e){alert(e.message)}}
 
   function setTab(tab){state.tab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('decisionsView').classList.toggle('hidden',tab!=='decisions');$('actionsView').classList.toggle('hidden',tab!=='actions');$('learningView').classList.toggle('hidden',tab!=='learning');}
-  async function load(refresh=false){if(state.loading)return;state.loading=true;$('loadingMessage').textContent=refresh?'กำลังรีเฟรช Action Center...':'กำลังโหลด Action Center...';try{if(!refresh){const cached=readCache();if(cached?.data){state.data=cached.data;$('cacheUpdatedAt').textContent=`Local cache: ${new Date(cached.saved_at).toLocaleString('th-TH')}`;prepareFilters();render();setUser();showApp();state.loading=false;return;}}const data=await request({action:'GET_ACTION_CENTER'});state.data=data;saveCache(data);$('cacheUpdatedAt').textContent=`Updated: ${new Date(data.generated_at).toLocaleString('th-TH')}`;prepareFilters();render();setUser();showApp();}catch(e){$('loadingMessage').textContent=e.message||'โหลด Action Center ไม่สำเร็จ';}finally{state.loading=false}}
+  async function load(refresh=false){
+    if(state.loading)return;
+    state.loading=true;
+    const refreshButton=$('refreshButton');
+    const previousButtonText=refreshButton?.textContent||'รีเฟรชข้อมูล';
+    let cacheVisible=false;
+    if(refreshButton){refreshButton.disabled=true;refreshButton.textContent=refresh?'กำลังรีเฟรช...':'กำลังอัปเดต...';}
+    $('loadingMessage').textContent=refresh?'กำลังรีเฟรช Action Center...':'กำลังโหลด Action Center...';
+    try{
+      if(!refresh){
+        const cached=readCache();
+        if(cached?.data){
+          state.data=cached.data;
+          cacheVisible=true;
+          $('cacheUpdatedAt').textContent=`Local cache: ${new Date(cached.saved_at).toLocaleString('th-TH')} · กำลังตรวจข้อมูลใหม่`;
+          prepareFilters();render();setUser();showApp();
+        }
+      }
+      const data=await request({action:'GET_ACTION_CENTER',cache_bust:Date.now()});
+      state.data=data;
+      saveCache(data);
+      const generatedAt=data.generated_at?new Date(data.generated_at):new Date();
+      $('cacheUpdatedAt').textContent=`Updated: ${generatedAt.toLocaleString('th-TH')}`;
+      prepareFilters();render();setUser();showApp();
+    }catch(e){
+      if(cacheVisible||state.data){
+        $('cacheUpdatedAt').textContent='แสดงข้อมูลจาก Local cache · รีเฟรช Backend ไม่สำเร็จ';
+        console.error('Action Center background refresh failed:',e);
+      }else{
+        $('loadingMessage').textContent=e.message||'โหลด Action Center ไม่สำเร็จ';
+      }
+    }finally{
+      state.loading=false;
+      if(refreshButton){refreshButton.disabled=false;refreshButton.textContent=previousButtonText;}
+    }
+  }
   function prepareFilters(){const rows=[...(state.data?.decisions||[]),...(state.data?.actions||[])];uniqueOptions('gameFilter',rows,r=>clean(r.Game_Name||r.Game_ID));uniqueOptions('accountFilter',rows,r=>clean(r.Account_Name||r.Account_ID));}
 
   $('actionForm').addEventListener('submit',createAction);$('clearSelectionButton').addEventListener('click',clearSelection);$('refreshButton').addEventListener('click',()=>load(true));$('logoutButton').addEventListener('click',()=>window.Auth.redirectToLogin());$('resetFiltersButton').addEventListener('click',()=>{$('searchFilter').value='';$('gameFilter').value='';$('accountFilter').value='';$('statusFilter').value='';render();});['searchFilter','gameFilter','accountFilter','statusFilter'].forEach(id=>$(id).addEventListener(id==='searchFilter'?'input':'change',render));document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));

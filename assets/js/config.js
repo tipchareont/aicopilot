@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  APP_VERSION: '5.6.6',
+  APP_VERSION: '5.6.7',
   LOGIN_URL:
     'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/login',
 
@@ -21,8 +21,11 @@ window.APP_CONFIG = {
   ACTION_MANAGEMENT_URL:
     'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/action-management',
 
-  GOOGLE_ADS_OVERVIEW_URL: '',
-  GOOGLE_ADS_CAMPAIGN_URL: '',
-  GOOGLE_ADS_INSIGHTS_URL: '',
-  GOOGLE_ADS_API_MODE: 'MOCK'
+  GOOGLE_ADS_OVERVIEW_URL:
+    'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/google-ads/overview',
+  GOOGLE_ADS_CAMPAIGN_URL:
+    'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/google-ads/campaign',
+  GOOGLE_ADS_INSIGHTS_URL:
+    'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/google-ads/insights',
+  GOOGLE_ADS_API_MODE: 'REAL'
 };

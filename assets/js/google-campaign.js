@@ -7,51 +7,151 @@
   const typeFilter = document.getElementById('typeFilter');
   const statusFilter = document.getElementById('statusFilter');
 
-  const currentFilters = () => ({ game: gameFilter.value || '', account: accountFilter.value || '', type: typeFilter.value || '', status: statusFilter.value || '' });
+  let dailyRows = [];
+  let latestDate = '';
+
+  const filters = () => ({
+    game: gameFilter?.value || '',
+    account: accountFilter?.value || '',
+    type: typeFilter?.value || '',
+    status: statusFilter?.value || '',
+  });
+
+  const setLoading = (text) => {
+    document.getElementById('updatedAt').textContent = text;
+  };
+
+  const aggregateCampaigns = (rows) => {
+    const groups = new Map();
+
+    for (const row of rows) {
+      const key = `${row.accountId}|${row.campaignId}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          ...row,
+          spend: 0,
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          convValue: 0,
+          latestDate: row.date,
+        });
+      }
+      const g = groups.get(key);
+      g.spend += row.spend;
+      g.impressions += row.impressions;
+      g.clicks += row.clicks;
+      g.conversions += row.conversions;
+      g.convValue += row.convValue;
+      if (row.date >= g.latestDate) {
+        g.latestDate = row.date;
+        g.status = row.status;
+        g.type = row.type;
+      }
+    }
+
+    return [...groups.values()].map((row) => ({
+      ...row,
+      ctr: row.impressions ? (row.clicks / row.impressions) * 100 : 0,
+      avgCpc: row.clicks ? row.spend / row.clicks : 0,
+      cpa: row.conversions ? row.spend / row.conversions : 0,
+      convRate: row.clicks ? (row.conversions / row.clicks) * 100 : 0,
+      note: `ข้อมูลจริง ${row.latestDate ? `ถึง ${row.latestDate}` : 'จาก Google Ads API'}`,
+    }));
+  };
 
   const render = () => {
-    const rows = UI.filterCampaigns(currentFilters());
+    const scopedDaily = UI.filterCampaigns(dailyRows, filters());
+    const rows = aggregateCampaigns(scopedDaily);
     const searchRows = rows.filter((row) => row.type === 'Search');
     const pmaxRows = rows.filter((row) => row.type === 'PMax');
-    document.getElementById('updatedAt').textContent = `อัปเดตล่าสุด ${UI.lastUpdated()}`;
+
+    document.getElementById('updatedAt').textContent = `ข้อมูลล่าสุด ${latestDate || '-'}`;
     document.getElementById('totalCampaigns').textContent = UI.number(rows.length);
     document.getElementById('searchCampaigns').textContent = UI.number(searchRows.length);
     document.getElementById('pmaxCampaigns').textContent = UI.number(pmaxRows.length);
-    document.getElementById('avgSearchIs').textContent = UI.percent(UI.avg(searchRows.filter((row) => row.searchIs !== null), 'searchIs'));
+    document.getElementById('avgSearchIs').textContent = '-';
     document.getElementById('tableBadge').textContent = `${rows.length} campaigns`;
-    document.getElementById('tableBody').innerHTML = rows.map((row) => `<tr>
-      <td>${row.campaign}</td>
-      <td>${row.game}</td>
-      <td>${row.account}</td>
-      <td>${row.type}</td>
-      <td><span class="status-pill ${UI.statusClass(row.status)}">${row.status}</span></td>
-      <td>${UI.money(row.spend)}</td>
-      <td>${UI.number(row.clicks)}</td>
-      <td>${UI.percent(row.ctr)}</td>
-      <td>${UI.money(row.avgCpc)}</td>
-      <td>${UI.number(row.conversions)}</td>
-      <td>${UI.money(row.cpa)}</td>
-      <td>${UI.percent(row.convRate)}</td>
-      <td>${row.searchIs === null ? '-' : UI.percent(row.searchIs)}</td>
-      <td>${row.lostBudget === null ? '-' : UI.percent(row.lostBudget)}</td>
-      <td>${row.lostRank === null ? '-' : UI.percent(row.lostRank)}</td>
-      <td>${row.note}</td>
-    </tr>`).join('') || '<tr><td colspan="16" class="table-empty">ไม่พบข้อมูล</td></tr>';
+
+    document.getElementById('tableBody').innerHTML =
+      rows
+        .sort((a,b) => b.spend - a.spend)
+        .map((row) => `<tr>
+          <td>${row.campaign}</td>
+          <td>${row.game}</td>
+          <td>${row.account}</td>
+          <td>${row.type}</td>
+          <td><span class="status-pill ${UI.statusClass(row.status)}">${row.status}</span></td>
+          <td>${UI.money(row.spend)}</td>
+          <td>${UI.number(row.clicks)}</td>
+          <td>${UI.percent(row.ctr)}</td>
+          <td>${UI.money(row.avgCpc)}</td>
+          <td>${UI.number(row.conversions)}</td>
+          <td>${UI.money(row.cpa)}</td>
+          <td>${UI.percent(row.convRate)}</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>${row.note}</td>
+        </tr>`).join('') ||
+      '<tr><td colspan="16" class="table-empty">ไม่พบข้อมูล Campaign</td></tr>';
   };
 
-  const boot = () => {
-    UI.fillSelect(gameFilter, UI.data.games);
-    UI.fillSelect(accountFilter, UI.unique(UI.data.accounts, 'account'));
-    UI.fillSelect(typeFilter, ['Search', 'PMax']);
-    UI.fillSelect(statusFilter, ['Active', 'Learning', 'Paused']);
-    gameFilter.addEventListener('change', () => {
-      const accounts = UI.data.accounts.filter((row) => !gameFilter.value || row.game === gameFilter.value).map((row) => row.account);
-      UI.fillSelect(accountFilter, [...new Set(accounts)]);
+  async function loadData({preserveFilters = false} = {}) {
+    try {
+      setLoading('กำลังโหลดข้อมูลจริง...');
+      const current = filters();
+
+      const overview = await UI.fetchOverview({
+        game: current.game,
+        account: current.account,
+      });
+      latestDate = overview.data_date || latestDate;
+
+      const endDate = latestDate || new Date().toISOString().slice(0,10);
+      const startDate = UI.shiftDate(endDate, -34);
+
+      const payload = await UI.fetchCampaigns(
+        {game: current.game, account: current.account},
+        {startDate, endDate, limit: 5000}
+      );
+      dailyRows = payload.rows || [];
+      latestDate = payload.data_date || latestDate;
+
+      if (!preserveFilters) {
+        UI.fillSelectOptions(gameFilter, UI.gameOptions(dailyRows));
+        UI.fillSelectOptions(accountFilter, UI.accountOptions(dailyRows, gameFilter?.value || ''));
+        UI.fillSelect(typeFilter, ['Search','PMax','Display','Video','Demand Gen']);
+        UI.fillSelect(statusFilter, ['Active','Learning','Paused']);
+      } else {
+        UI.fillSelectOptions(accountFilter, UI.accountOptions(dailyRows, gameFilter?.value || ''));
+      }
+
       render();
-    });
-    [accountFilter, typeFilter, statusFilter].forEach((node) => node.addEventListener('change', render));
+    } catch (error) {
+      console.error('[Google Ads Campaign]', error);
+      if (Number(error?.httpStatus) === 401) {
+        window.Auth?.redirectToLogin?.();
+        return;
+      }
+      setLoading('โหลดข้อมูลไม่สำเร็จ');
+      document.getElementById('tableBody').innerHTML =
+        `<tr><td colspan="16" class="table-empty">${error?.message || 'Google Ads API Error'}</td></tr>`;
+    }
+  }
+
+  const boot = async () => {
+    document.getElementById('displayName').textContent =
+      localStorage.getItem('display_name') || localStorage.getItem('username') || 'User';
+    document.getElementById('role').textContent = localStorage.getItem('role') || 'USER';
+
+    gameFilter?.addEventListener('change', () => loadData({preserveFilters:true}));
+    accountFilter?.addEventListener('change', () => loadData({preserveFilters:true}));
+    typeFilter?.addEventListener('change', render);
+    statusFilter?.addEventListener('change', render);
     document.getElementById('logoutButton')?.addEventListener('click', () => window.Auth.redirectToLogin());
-    render();
+
+    await loadData();
   };
 
   boot();

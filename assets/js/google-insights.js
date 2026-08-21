@@ -7,77 +7,349 @@
 
   let scopeRows = [];
 
+  const clean = UI.clean;
+  const num = UI.num;
+
+  const escapeHtml = (value) =>
+    clean(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
   const current = () => ({
     game: gameFilter?.value || '',
     account: accountFilter?.value || '',
   });
 
-  const emptyTables = (message) => {
-    document.getElementById('keywordBody').innerHTML =
-      `<tr><td colspan="11" class="table-empty">${message}</td></tr>`;
-    document.getElementById('assetBody').innerHTML =
-      `<tr><td colspan="8" class="table-empty">${message}</td></tr>`;
-    document.getElementById('termBody').innerHTML =
-      `<tr><td colspan="8" class="table-empty">${message}</td></tr>`;
+  const emptyRow = (cols, message) =>
+    `<tr><td colspan="${cols}" class="table-empty">${escapeHtml(message)}</td></tr>`;
+
+  const searchTermAction = (row) => {
+    if (num(row.Conversions) > 0) {
+      return 'มี Conversion — ใช้เป็น Intent Signal สำหรับตรวจต่อ';
+    }
+    if (num(row.Clicks) > 0) {
+      return 'มี Click แต่ยังไม่ Convert — ตรวจ Intent / Landing';
+    }
+    return 'เฝ้าดูข้อมูลเพิ่ม';
   };
 
-  async function load({preserveFilters = false} = {}) {
-    try {
-      document.getElementById('updatedAt').textContent = 'กำลังตรวจข้อมูลจริง...';
+  const keywordAction = (row) => {
+    if (num(row.Conversions) > 0) {
+      return 'มี Conversion — จัดเป็น Keyword ที่ควรตรวจต่อ';
+    }
+    if (num(row.Clicks) > 0) {
+      return 'มี Click แต่ยังไม่ Convert — ตรวจ Search Intent';
+    }
+    return 'เฝ้าดูข้อมูลเพิ่ม';
+  };
 
-      // Real campaign request is used only to build authorized filters.
-      const overview = await UI.fetchOverview(current());
-      const endDate = overview.data_date || new Date().toISOString().slice(0,10);
-      const campaign = await UI.fetchCampaigns(
-        current(),
-        {startDate:endDate, endDate, limit:5000}
-      );
-      scopeRows = campaign.rows || [];
+  const assetInsight = (row) => {
+    const strength = clean(row.Ad_Strength).toUpperCase();
 
-      if (!preserveFilters) {
-        UI.fillSelectOptions(gameFilter, UI.gameOptions(scopeRows));
-        UI.fillSelectOptions(accountFilter, UI.accountOptions(scopeRows, gameFilter?.value || ''));
-      } else {
-        UI.fillSelectOptions(accountFilter, UI.accountOptions(scopeRows, gameFilter?.value || ''));
+    if (strength === 'EXCELLENT') return 'Asset Strength ดีมาก';
+    if (strength === 'GOOD') return 'Asset Strength อยู่ในเกณฑ์ดี';
+    if (['AVERAGE','POOR','INCOMPLETE'].includes(strength)) {
+      return 'ควรตรวจ Asset Mix / Coverage';
+    }
+    return 'ตรวจสถานะ Asset เพิ่มเติม';
+  };
+
+  async function ensureScopeRows() {
+    if (scopeRows.length) return;
+
+    const overview = await UI.fetchOverview({});
+    const endDate =
+      overview.data_date ||
+      new Date().toISOString().slice(0,10);
+
+    const campaign = await UI.fetchCampaigns(
+      {},
+      {
+        startDate:endDate,
+        endDate,
+        limit:5000,
       }
+    );
+
+    scopeRows = campaign.rows || [];
+
+    UI.fillSelectOptions(
+      gameFilter,
+      UI.gameOptions(scopeRows)
+    );
+
+    UI.fillSelectOptions(
+      accountFilter,
+      UI.accountOptions(
+        scopeRows,
+        gameFilter?.value || ''
+      )
+    );
+  }
+
+  function render(result) {
+    const summary = result.summary || {};
+    const keywords = Array.isArray(result.keywords) ? result.keywords : [];
+    const assetGroups = Array.isArray(result.asset_groups) ? result.asset_groups : [];
+    const searchCampaigns = Array.isArray(result.search_campaigns) ? result.search_campaigns : [];
+    const searchTerms = Array.isArray(result.search_terms) ? result.search_terms : [];
+
+    document.getElementById('updatedAt').textContent =
+      `ข้อมูลล่าสุด ${result.data_date || '-'}`;
+
+    document.getElementById('keywordKpi').textContent =
+      UI.number(summary.keyword_count || 0);
+
+    document.getElementById('termKpi').textContent =
+      UI.number(summary.search_terms_to_review || 0);
+
+    document.getElementById('assetKpi').textContent =
+      UI.number(summary.asset_group_count || 0);
+
+    // No arbitrary "Low Search IS" threshold is invented in V1.
+    document.getElementById('lowIsKpi').textContent =
+      searchCampaigns.length ? '-' : '-';
+
+    document.getElementById('weakAssetKpi').textContent =
+      UI.number(summary.weak_asset_strength_count || 0);
+
+    const keywordBody = document.getElementById('keywordBody');
+
+    if (!keywords.length) {
+      keywordBody.innerHTML = emptyRow(
+        11,
+        'ไม่พบ Search Keyword ใน Scope นี้ — PMax-only account สามารถเป็น 0 ได้'
+      );
+    } else {
+      keywordBody.innerHTML = keywords
+        .slice(0,10)
+        .map((row,index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(row.Keyword)}</td>
+            <td>${escapeHtml(row.Game_Name || row.Game_ID)}</td>
+            <td>${escapeHtml(row.Campaign_Name)}</td>
+            <td>${escapeHtml(row.Match_Type || '-')}</td>
+            <td>${UI.number(row.Clicks)}</td>
+            <td>${UI.percent(num(row.CTR) * 100)}</td>
+            <td>${UI.number(row.Conversions)}</td>
+            <td>${num(row.Conversions) > 0 ? UI.money(row.CPA) : '-'}</td>
+            <td>${
+              row.Search_Impression_Share === null ||
+              row.Search_Impression_Share === undefined
+                ? '-'
+                : UI.percent(row.Search_Impression_Share)
+            }</td>
+            <td>${escapeHtml(keywordAction(row))}</td>
+          </tr>
+        `)
+        .join('');
+    }
+
+    const assetBody = document.getElementById('assetBody');
+
+    if (!assetGroups.length) {
+      assetBody.innerHTML = emptyRow(
+        8,
+        'ไม่พบ PMax Asset Group ใน Scope นี้'
+      );
+    } else {
+      assetBody.innerHTML = assetGroups
+        .slice(0,10)
+        .map(row => {
+          const signal = [
+            `${UI.number(row.Asset_Count || 0)} assets`,
+            ...(Array.isArray(row.Field_Types) ? row.Field_Types.slice(0,3) : []),
+          ].join(' • ');
+
+          return `
+            <tr>
+              <td>${escapeHtml(row.Asset_Group_Name || row.Asset_Group_ID)}</td>
+              <td>${escapeHtml(row.Campaign_Name)}</td>
+              <td><span class="status-pill ${
+                clean(row.Ad_Strength).toUpperCase() === 'EXCELLENT' ? 'good' :
+                ['AVERAGE','POOR','INCOMPLETE'].includes(clean(row.Ad_Strength).toUpperCase()) ? 'watch' :
+                ''
+              }">${escapeHtml(row.Ad_Strength || '-')}</span></td>
+              <td>${UI.money(row.Spend)}</td>
+              <td>${UI.number(row.Conversions)}</td>
+              <td>${num(row.Conversions) > 0 ? UI.money(row.CPA) : '-'}</td>
+              <td>${escapeHtml(signal)}</td>
+              <td>${escapeHtml(assetInsight(row))}</td>
+            </tr>
+          `;
+        })
+        .join('');
+    }
+
+    const termBody = document.getElementById('termBody');
+
+    if (!searchTerms.length) {
+      termBody.innerHTML = emptyRow(
+        8,
+        'ยังไม่พบ Search Term ใน Scope นี้'
+      );
+    } else {
+      termBody.innerHTML = searchTerms
+        .slice(0,10)
+        .map(row => `
+          <tr>
+            <td>${escapeHtml(row.Search_Term)}</td>
+            <td>${escapeHtml(row.Campaign_Name)}</td>
+            <td>${escapeHtml(row.Search_Term_Match_Type || row.Campaign_Type || '-')}</td>
+            <td>${UI.number(row.Clicks)}</td>
+            <td>${UI.percent(num(row.CTR) * 100)}</td>
+            <td>${UI.number(row.Conversions)}</td>
+            <td>${num(row.Conversions) > 0 ? UI.money(row.CPA) : '-'}</td>
+            <td>${escapeHtml(searchTermAction(row))}</td>
+          </tr>
+        `)
+        .join('');
+    }
+
+    const recommendationList = document.getElementById('recommendationList');
+    const cards = [];
+
+    if (assetGroups.length) {
+      cards.push(`
+        <article class="action-card" data-level="${
+          num(summary.weak_asset_strength_count) > 0 ? 'medium' : 'good'
+        }">
+          <div class="action-head">
+            <strong>PMax Asset Group Health</strong>
+            <span>${UI.number(assetGroups.length)} groups</span>
+          </div>
+          <p>${
+            num(summary.weak_asset_strength_count) > 0
+              ? `พบ ${UI.number(summary.weak_asset_strength_count)} Asset Group ที่ Ad Strength เป็น Average / Poor / Incomplete`
+              : 'Asset Group ที่มีข้อมูลอยู่ในสถานะ Good / Excellent — ยังไม่มี Google-specific AI scoring ในขั้นนี้'
+          }</p>
+        </article>
+      `);
+    }
+
+    cards.push(`
+      <article class="action-card" data-level="${
+        num(summary.search_terms_to_review) > 0 ? 'medium' : 'good'
+      }">
+        <div class="action-head">
+          <strong>Search Term Review Queue</strong>
+          <span>${UI.number(summary.search_terms_to_review || 0)}</span>
+        </div>
+        <p>นับจาก Search Term ที่มี Click แต่ยังไม่มี Conversion เท่านั้น เป็น Data Signal ไม่ใช่ AI Recommendation</p>
+      </article>
+    `);
+
+    if (!keywords.length) {
+      cards.push(`
+        <article class="action-card">
+          <div class="action-head"><strong>Search Keyword</strong></div>
+          <p>Account นี้ยังไม่มี Search Keyword ในช่วงข้อมูลที่อ่านได้ ซึ่งสอดคล้องกับโครงสร้าง PMax-only ปัจจุบัน</p>
+        </article>
+      `);
+    }
+
+    recommendationList.innerHTML = cards.join('');
+  }
+
+  async function loadInsights() {
+    try {
+      document.getElementById('updatedAt').textContent =
+        'กำลังโหลดข้อมูลจริง...';
 
       const result = await UI.fetchInsights(current());
-      const message = result.message || 'Asset Group / Keyword / Search Term ETL ยังไม่ได้เปิดใช้งาน';
 
-      document.getElementById('updatedAt').textContent = `ข้อมูลล่าสุด ${result.data_date || endDate || '-'}`;
-      document.getElementById('termKpi').textContent = '0';
-      document.getElementById('keywordKpi').textContent = '0';
-      document.getElementById('assetKpi').textContent = '0';
-      document.getElementById('lowIsKpi').textContent = '-';
-      document.getElementById('weakAssetKpi').textContent = '-';
-      emptyTables(message);
+      if (!result.data_available) {
+        document.getElementById('updatedAt').textContent =
+          `ข้อมูลล่าสุด ${result.data_date || '-'}`;
 
-      document.getElementById('recommendationList').innerHTML =
-        `<article class="action-card" data-level="medium">
-          <div class="action-head"><strong>รอ Google-specific Insight ETL</strong></div>
-          <p>${message} หน้านี้จึงไม่แสดง Mock Data เพื่อป้องกันการตีความข้อมูลจำลองเป็นข้อมูลจริง</p>
-        </article>`;
+        document.getElementById('keywordKpi').textContent = '0';
+        document.getElementById('termKpi').textContent = '0';
+        document.getElementById('assetKpi').textContent = '0';
+        document.getElementById('lowIsKpi').textContent = '-';
+        document.getElementById('weakAssetKpi').textContent = '0';
+
+        document.getElementById('keywordBody').innerHTML =
+          emptyRow(11, result.message || 'ยังไม่มีข้อมูล');
+
+        document.getElementById('assetBody').innerHTML =
+          emptyRow(8, result.message || 'ยังไม่มีข้อมูล');
+
+        document.getElementById('termBody').innerHTML =
+          emptyRow(8, result.message || 'ยังไม่มีข้อมูล');
+
+        document.getElementById('recommendationList').innerHTML = `
+          <article class="action-card" data-level="medium">
+            <div class="action-head"><strong>ยังไม่มี Google Insight Data</strong></div>
+            <p>${escapeHtml(result.message || 'ยังไม่มีข้อมูลใน Scope นี้')}</p>
+          </article>
+        `;
+        return;
+      }
+
+      render(result);
     } catch (error) {
       console.error('[Google Ads Insights]', error);
+
       if (Number(error?.httpStatus) === 401) {
         window.Auth?.redirectToLogin?.();
         return;
       }
-      document.getElementById('updatedAt').textContent = 'โหลดข้อมูลไม่สำเร็จ';
-      emptyTables(error?.message || 'Google Ads API Error');
+
+      document.getElementById('updatedAt').textContent =
+        'โหลดข้อมูลไม่สำเร็จ';
+
+      document.getElementById('keywordBody').innerHTML =
+        emptyRow(11, error?.message || 'Google Ads API Error');
+
+      document.getElementById('assetBody').innerHTML =
+        emptyRow(8, error?.message || 'Google Ads API Error');
+
+      document.getElementById('termBody').innerHTML =
+        emptyRow(8, error?.message || 'Google Ads API Error');
     }
   }
 
   const boot = async () => {
     document.getElementById('displayName').textContent =
-      localStorage.getItem('display_name') || localStorage.getItem('username') || 'User';
-    document.getElementById('role').textContent = localStorage.getItem('role') || 'USER';
+      localStorage.getItem('display_name') ||
+      localStorage.getItem('username') ||
+      'User';
 
-    gameFilter?.addEventListener('change', () => load({preserveFilters:true}));
-    accountFilter?.addEventListener('change', () => load({preserveFilters:true}));
-    document.getElementById('logoutButton')?.addEventListener('click', () => window.Auth.redirectToLogin());
+    document.getElementById('role').textContent =
+      localStorage.getItem('role') ||
+      'USER';
 
-    await load();
+    await ensureScopeRows();
+
+    gameFilter?.addEventListener('change', async () => {
+      accountFilter.value = '';
+      UI.fillSelectOptions(
+        accountFilter,
+        UI.accountOptions(
+          scopeRows,
+          gameFilter?.value || ''
+        )
+      );
+      await loadInsights();
+    });
+
+    accountFilter?.addEventListener(
+      'change',
+      loadInsights
+    );
+
+    document
+      .getElementById('logoutButton')
+      ?.addEventListener(
+        'click',
+        () => window.Auth.redirectToLogin()
+      );
+
+    await loadInsights();
   };
 
   boot();

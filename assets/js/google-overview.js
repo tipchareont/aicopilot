@@ -47,7 +47,7 @@
     }
     const trend = [...groups.entries()]
       .sort(([a],[b]) => a.localeCompare(b))
-      .slice(-14)
+      .slice(-7)
       .map(([date, items]) => {
         const sum = UI.summarize(items);
         return {

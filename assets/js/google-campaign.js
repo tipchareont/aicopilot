@@ -102,13 +102,17 @@
       setLoading('กำลังโหลดข้อมูลจริง...');
       const current = filters();
 
-      const overview = await UI.fetchOverview({
-        game: current.game,
-        account: current.account,
-      });
-      latestDate = overview.data_date || latestDate;
+      // Campaign page needs only Campaign API.
+      // Use yesterday in Asia/Bangkok as the upper bound so the page does not
+      // wait for a redundant Overview API request before loading the table.
+      const todayBangkok = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
 
-      const endDate = latestDate || new Date().toISOString().slice(0,10);
+      const endDate = UI.shiftDate(todayBangkok, -1);
       const startDate = UI.shiftDate(endDate, -34);
 
       const payload = await UI.fetchCampaigns(

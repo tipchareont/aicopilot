@@ -6,9 +6,9 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Scale Up Advisor | AI Marketing Copilot</title>
 <meta content="Scale Up Advisor แนะนำ Campaign ที่มีโอกาสเพิ่มงบ พร้อม Risk, Metrics และ Guardrail จากข้อมูลจริง" name="description"/>
-<link href="../assets/css/app.css?v=5.7.4" rel="stylesheet"/>
-<link href="../assets/css/product.css?v=5.7.4" rel="stylesheet"/>
-<link href="../assets/css/scale-advisor.css?v=5.7.4" rel="stylesheet"/>
+<link href="../assets/css/app.css?v=5.7.5" rel="stylesheet"/>
+<link href="../assets/css/product.css?v=5.7.5" rel="stylesheet"/>
+<link href="../assets/css/scale-advisor.css?v=5.7.5" rel="stylesheet"/>
 </head>
 <body>
 <section aria-live="polite" class="loading" id="loading">
@@ -67,35 +67,67 @@
 </header>
 <main class="content">
 <section class="advisor-notice">
-<div><strong>ระบบแนะนำเท่านั้น</strong><p>ระบบไม่แก้ Budget หรือ Ads อัตโนมัติ Campaign Status ยังคงมาจาก Scoring_Rules + Benchmark Percentiles</p></div>
-<span class="panel-badge" id="dataDateBadge">Data: -</span>
+  <div><strong>ระบบแนะนำเท่านั้น</strong><p>Meta ใช้ Scoring Rules + Benchmark Percentiles ส่วน Google แสดงเฉพาะ SCALE_SIGNAL ที่มีหลักฐานจริง ระบบไม่แก้ Budget หรือ Ads อัตโนมัติ</p></div>
+  <span class="panel-badge" id="dataDateBadge">Data: -</span>
 </section>
+
 <section class="panel">
-<div class="panel-header"><div><h2>ตัวกรอง</h2><p>เลือก Game, Account หรือคำแนะนำที่ต้องการตรวจ</p></div><span class="panel-badge" id="updatedAt">-</span></div>
-<div class="panel-body"><div class="filters advisor-filters">
-<div class="field"><label>ค้นหา Campaign</label><input id="searchFilter" placeholder="ชื่อ Campaign..."/></div>
-<div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
-<div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
-<div class="field"><label>Advisor Decision</label><select id="decisionFilter"><option value="">ทั้งหมด</option><option value="SCALE_READY">พร้อม Scale</option><option value="TEST_SCALE">ทดลอง Scale</option><option value="HOLD">Hold</option><option value="HOLD_REVIEW">Hold &amp; Review</option><option value="DO_NOT_SCALE">ห้าม Scale</option><option value="INSUFFICIENT_DATA">ข้อมูลไม่พอ</option></select></div>
-</div><div class="filter-actions" style="margin-top:12px"><button class="button-secondary" id="resetButton" type="button">รีเซ็ตตัวกรอง</button></div></div>
+  <div class="panel-header">
+    <div><h2>ตัวกรอง</h2><p>เลือก Campaign, Game, Account หรือสถานะที่ต้องการตรวจ</p></div>
+    <span class="panel-badge" id="updatedAt">-</span>
+  </div>
+  <div class="panel-body">
+    <div class="filters advisor-filters">
+      <div class="field"><label>ค้นหา Campaign</label><input id="searchFilter" placeholder="ชื่อ Campaign..."/></div>
+      <div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
+      <div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+      <div class="field"><label>Advisor Decision</label><select id="decisionFilter"><option value="">ทั้งหมด</option><option value="SCALE_READY">พร้อม Scale</option><option value="TEST_SCALE">ทดลอง Scale</option><option value="GOOGLE_SCALE_SIGNAL">Google Scale Signal</option><option value="HOLD">Hold</option><option value="HOLD_REVIEW">Hold &amp; Review</option><option value="DO_NOT_SCALE">ห้าม Scale</option><option value="INSUFFICIENT_DATA">ข้อมูลไม่พอ</option></select></div>
+    </div>
+    <div class="filter-actions" style="margin-top:12px"><button class="button-secondary" id="resetButton" type="button">รีเซ็ตตัวกรอง</button></div>
+  </div>
 </section>
-<section class="metrics advisor-metrics">
-<article class="metric-card"><span>พร้อม Scale</span><strong id="scaleReadyCount">0</strong><small>ผ่าน Status, Confidence และ Main Metric</small></article>
-<article class="metric-card"><span>ทดลอง Scale</span><strong id="testScaleCount">0</strong><small>เพิ่มงบ Step เล็กและติดตาม</small></article>
-<article class="metric-card"><span>Hold / Review</span><strong id="holdCount">0</strong><small>ยังไม่ควรเพิ่มงบ</small></article>
-<article class="metric-card"><span>ห้าม Scale</span><strong id="blockedCount">0</strong><small>CRITICAL หรือข้อมูลไม่พอ</small></article>
+
+<section class="advisor-summary-grid">
+  <article class="advisor-summary-card tone-green"><span>พร้อม Scale</span><strong id="scaleReadyCount">0</strong></article>
+  <article class="advisor-summary-card"><span>ทดลอง Scale</span><strong id="testScaleCount">0</strong></article>
+  <article class="advisor-summary-card tone-amber"><span>Hold / Review</span><strong id="holdCount">0</strong></article>
+  <article class="advisor-summary-card tone-red"><span>ห้าม Scale</span><strong id="blockedCount">0</strong></article>
+  <article class="advisor-summary-card tone-slate"><span>ข้อมูลไม่พอ</span><strong id="insufficientCount">0</strong></article>
 </section>
+
 <section class="panel">
-<div class="panel-header"><div><h3>Scale Recommendation</h3><p>เรียงตามความพร้อมและหลักฐานจากข้อมูลล่าสุด</p></div><span class="panel-badge" id="resultBadge">0 campaigns</span></div>
-<div class="advisor-list panel-body" id="advisorList"><div class="empty">รอโหลดข้อมูล</div></div>
+  <div class="panel-header">
+    <div>
+      <h3>Scale Recommendation
+        <span class="info-tip"><button type="button" aria-label="คำอธิบาย">i</button><span class="info-pop">จัด Campaign ตาม Platform และ Game เพื่อให้เห็นสิ่งที่ต้องตัดสินใจก่อน ส่วน Campaign ที่ข้อมูลยังไม่พอจะถูกพับไว้ด้านล่าง</span></span>
+      </h3>
+      <p>ค่าเริ่มต้นจะแสดงเฉพาะ Campaign ที่ต้องตัดสินใจ เพื่อลดการไถหน้าจอ</p>
+    </div>
+    <span class="panel-badge" id="resultBadge">0 campaigns</span>
+  </div>
+  <div class="panel-body">
+    <div class="advisor-view-tabs" id="viewTabs">
+      <button class="advisor-view-tab is-active" data-view="ACTIONABLE" type="button">ต้องตัดสินใจ</button>
+      <button class="advisor-view-tab" data-view="ALL" type="button">ทั้งหมด</button>
+      <button class="advisor-view-tab" data-view="READY" type="button">พร้อม Scale</button>
+      <button class="advisor-view-tab" data-view="HOLD" type="button">Hold / Review</button>
+      <button class="advisor-view-tab" data-view="STOP" type="button">ห้าม Scale</button>
+    </div>
+    <div class="advisor-group-list" id="advisorGroupList" style="margin-top:16px"></div>
+    <details class="advisor-insufficient-wrap" id="insufficientWrap">
+      <summary id="insufficientSummary">ข้อมูลไม่เพียงพอ 0 Campaign — กดเพื่อดู</summary>
+      <div class="advisor-insufficient-list" id="insufficientList"></div>
+    </details>
+  </div>
 </section>
-<footer class="footer-note">AI Marketing Copilot · Scale Up Advisor V2 · Frontend V5.0.0</footer>
+
+<footer class="footer-note">AI Marketing Copilot · Scale Up Advisor V2 · Frontend V5.7.5</footer>
 </main>
 </section>
 </div>
-<script src="../assets/js/config.js?v=5.7.4"></script>
-<script src="../assets/js/auth.js?v=5.7.4"></script>
-<script src="../assets/js/product-data.js?v=5.7.4"></script>
-<script src="../assets/js/scale-advisor.js?v=5.7.4"></script>
-<script src="../assets/js/sidebar.js?v=5.7.4"></script></body>
+<script src="../assets/js/config.js?v=5.7.5"></script>
+<script src="../assets/js/auth.js?v=5.7.5"></script>
+<script src="../assets/js/product-data.js?v=5.7.5"></script>
+<script src="../assets/js/scale-advisor.js?v=5.7.5"></script>
+<script src="../assets/js/sidebar.js?v=5.7.5"></script></body>
 </html>

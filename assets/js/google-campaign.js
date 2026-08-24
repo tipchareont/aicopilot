@@ -77,24 +77,22 @@
       rows
         .sort((a,b) => b.spend - a.spend)
         .map((row) => `<tr>
-          <td>${row.campaign}</td>
-          <td>${row.game}</td>
-          <td>${row.account}</td>
-          <td>${row.type}</td>
-          <td><span class="status-pill ${UI.statusClass(row.status)}">${row.status}</span></td>
-          <td>${UI.money(row.spend)}</td>
-          <td>${UI.number(row.clicks)}</td>
-          <td>${UI.percent(row.ctr)}</td>
-          <td>${UI.money(row.avgCpc)}</td>
-          <td>${UI.number(row.conversions)}</td>
-          <td>${UI.money(row.cpa)}</td>
-          <td>${UI.percent(row.convRate)}</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>${row.note}</td>
+          <td class="campaign-name">
+            <strong>${row.campaign}</strong>
+            <small>${row.game} · ${row.account}</small>
+          </td>
+          <td><div class="campaign-type"><span class="type-pill">${row.type}</span><span class="status-pill ${UI.statusClass(row.status)}">${row.status}</span></div></td>
+          <td class="metric">${UI.money(row.spend)}</td>
+          <td class="metric">${UI.number(row.clicks)}</td>
+          <td class="metric">${UI.percent(row.ctr)}</td>
+          <td class="metric">${UI.money(row.avgCpc)}</td>
+          <td class="metric">${UI.number(row.conversions)}</td>
+          <td class="metric">${row.conversions > 0 ? UI.money(row.cpa) : '-'}</td>
+          <td class="metric">${UI.percent(row.convRate)}</td>
+          <td class="metric">-</td>
+          <td class="insight-text">${row.note}</td>
         </tr>`).join('') ||
-      '<tr><td colspan="16" class="table-empty">ไม่พบข้อมูล Campaign</td></tr>';
+      '<tr><td colspan="11" class="table-empty">ไม่พบข้อมูล Campaign</td></tr>';
   };
 
   async function loadData() {
@@ -136,7 +134,7 @@
       }
       setLoading('โหลดข้อมูลไม่สำเร็จ');
       document.getElementById('tableBody').innerHTML =
-        `<tr><td colspan="16" class="table-empty">${error?.message || 'Google Ads API Error'}</td></tr>`;
+        `<tr><td colspan="11" class="table-empty">${error?.message || 'Google Ads API Error'}</td></tr>`;
     }
   }
 

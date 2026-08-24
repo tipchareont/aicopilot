@@ -4,15 +4,84 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Google Asset & Search Insights | AI Marketing Copilot</title>
-  <link rel="stylesheet" href="../assets/css/app.css?v=5.7.3" />
+  <link rel="stylesheet" href="../assets/css/app.css?v=5.7.4" />
   <style>
-    :root{--bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;--primary:#2563eb;--primary-soft:#eff6ff;--success:#15803d;--success-soft:#f0fdf4;--warning:#b45309;--warning-soft:#fffbeb;--danger:#b91c1c;--danger-soft:#fef2f2;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px} *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text)} .main{display:flex;flex-direction:column;min-height:100vh}
-    .topbar{gap:20px}.topbar-title h1,.topbar-title p{margin:0}.topbar-title p{margin-top:4px;color:var(--muted)}.topbar-actions,.user-box{display:flex;align-items:center;gap:12px}.user-meta{display:grid;gap:2px;text-align:right}.user-meta span{color:var(--muted);font-size:12px}.button-secondary,.button-primary{border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}.button-secondary{border:1px solid var(--border);background:var(--surface);color:var(--text)}.button-primary{border:1px solid var(--primary);background:var(--primary);color:#fff}
-    .content{max-width:1500px;width:100%;padding:28px;display:grid;gap:18px}.panel,.kpi-card,.filter-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}.filter-panel{padding:18px 20px;display:grid;gap:14px}.filter-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.filter-top h2,.filter-top p{margin:0}.filter-top p{margin-top:4px;color:var(--muted);font-size:13px}.filters{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:700;color:#475569}.field select{padding:11px 12px;border:1px solid #cfd7e3;border-radius:10px;background:#fff}
-    .kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.kpi-card{padding:18px}.kpi-card strong{display:block;margin-top:10px;font-size:30px}.kpi-card span{color:var(--muted);font-size:13px}
-    .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--border)}.panel-header h3,.panel-header p{margin:0}.panel-header p{margin-top:4px;color:var(--muted);font-size:13px}.panel-badge{padding:7px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:700}.panel-body{padding:18px 20px}.table-wrap{overflow:auto}.data-table{width:100%;min-width:780px;border-collapse:collapse;font-size:13px}.data-table th,.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.data-table th{background:#f8fafc;color:#475569}.status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#f1f5f9;color:#475569}.status-pill.good{background:var(--success-soft);color:var(--success)}.status-pill.watch{background:var(--warning-soft);color:var(--warning)}.status-pill.critical{background:var(--danger-soft);color:var(--danger)} .table-empty{text-align:center;color:var(--muted)}
-    .action-list{display:grid;gap:10px}.action-card{padding:13px;border-radius:14px;border:1px solid var(--border);background:#fafcff}.action-card[data-level="high"]{border-color:#fecaca;background:var(--danger-soft)}.action-card[data-level="medium"]{border-color:#fde68a;background:var(--warning-soft)}.action-card[data-level="good"]{border-color:#bbf7d0;background:var(--success-soft)}.action-head{display:flex;justify-content:space-between;gap:12px}.action-card p{margin:7px 0 0;color:#475569;font-size:12px;line-height:1.65} .footer-note{padding:0 4px 20px;color:var(--muted);font-size:12px;text-align:center}
-    @media(max-width:1080px){.filters,.kpi-grid,.dashboard-grid{grid-template-columns:1fr}}
+    :root{
+      --bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;
+      --blue:#2563eb;--blue-soft:#eff6ff;--green:#15803d;--green-soft:#f0fdf4;
+      --amber:#b45309;--amber-soft:#fffbeb;--red:#b91c1c;--red-soft:#fef2f2;
+      --slate:#475569;--slate-soft:#f8fafc;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px
+    }
+    *{box-sizing:border-box}
+    html,body{max-width:100%;overflow-x:hidden}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .shell,.main,.content,.panel,.panel-body,.table-wrap{min-width:0}
+    .main{display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+    .topbar{gap:20px}.topbar-title h1,.topbar-title p{margin:0}.topbar-title p{margin-top:4px;color:var(--muted)}
+    .topbar-actions,.user-box{display:flex;align-items:center;gap:12px}.user-meta{display:grid;gap:2px;text-align:right}
+    .user-meta span{color:var(--muted);font-size:12px}
+    .button-secondary,.button-primary{border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .button-secondary{border:1px solid var(--border);background:var(--surface);color:var(--text)}
+    .button-primary{border:1px solid var(--blue);background:var(--blue);color:#fff}
+    .content{max-width:1500px;width:100%;padding:28px;display:grid;gap:18px}
+    .panel,.filter-panel,.signal-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+    .filter-panel{padding:18px 20px;display:grid;gap:14px}
+    .filter-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+    .filter-top h2,.filter-top p{margin:0}.filter-top p{margin-top:4px;color:var(--muted);font-size:13px}
+    .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .field{display:grid;gap:6px}.field label{font-size:12px;font-weight:700;color:#475569}
+    .field select{width:100%;min-width:0;padding:11px 12px;border:1px solid #cfd7e3;border-radius:10px;background:#fff}
+    .panel-badge,.chip{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+    .panel-badge{background:var(--blue-soft);color:var(--blue)}
+    .chip.blue{background:var(--blue-soft);color:var(--blue)}.chip.green{background:var(--green-soft);color:var(--green)}
+    .chip.amber{background:var(--amber-soft);color:var(--amber)}.chip.red{background:var(--red-soft);color:var(--red)}
+    .chip.slate{background:#eef2f7;color:var(--slate)}
+    .signal-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .signal-card{padding:16px 18px;border-left:4px solid var(--border)}
+    .signal-card[data-tone="risk"]{border-left-color:var(--red);background:linear-gradient(90deg,var(--red-soft),#fff 42%)}
+    .signal-card[data-tone="watch"]{border-left-color:var(--amber);background:linear-gradient(90deg,var(--amber-soft),#fff 42%)}
+    .signal-card[data-tone="good"]{border-left-color:var(--green);background:linear-gradient(90deg,var(--green-soft),#fff 42%)}
+    .signal-card[data-tone="info"]{border-left-color:var(--blue);background:linear-gradient(90deg,var(--blue-soft),#fff 42%)}
+    .signal-card span{display:block;color:var(--muted);font-size:12px;font-weight:700}.signal-card strong{display:block;margin-top:8px;font-size:26px}
+    .signal-card p{margin:6px 0 0;color:#475569;font-size:12px;line-height:1.45}
+    .panel-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--border)}
+    .panel-header h3,.panel-header p{margin:0}.panel-header p{margin-top:4px;color:var(--muted);font-size:13px}
+    .panel-body{padding:18px 20px}
+    .ai-summary{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,.6fr);gap:16px}
+    .summary-copy{padding:16px;border-radius:14px;background:#f8fafc;border:1px solid var(--border)}
+    .summary-copy h4{margin:0 0 8px}.summary-copy p{margin:0;color:#475569;line-height:1.65;font-size:13px}
+    .summary-stack{display:grid;gap:10px}.mini-signal{padding:12px 13px;border-radius:12px;border:1px solid var(--border);background:#fff}
+    .mini-signal strong{display:block;font-size:12px}.mini-signal p{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
+    .action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .action-card{padding:15px;border-radius:14px;border:1px solid var(--border);background:#fff}
+    .action-card[data-priority="HIGH"]{border-color:#fecaca;background:var(--red-soft)}
+    .action-card[data-priority="MEDIUM"]{border-color:#fde68a;background:var(--amber-soft)}
+    .action-card[data-priority="LOW"]{border-color:#bfdbfe;background:var(--blue-soft)}
+    .action-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.action-card p{margin:8px 0 0;color:#475569;font-size:12px;line-height:1.55}
+    .asset-health{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:16px}
+    .asset-table,.keyword-table{width:100%;border-collapse:collapse;font-size:13px}
+    .asset-table th,.asset-table td,.keyword-table th,.keyword-table td{padding:11px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+    .asset-table th,.keyword-table th{background:#f8fafc;color:#475569;font-size:12px}
+    .metric{white-space:nowrap;font-variant-numeric:tabular-nums}
+    .coverage-box{padding:16px;border:1px solid var(--border);border-radius:14px;background:#fbfdff}
+    .coverage-box h4{margin:0 0 10px}.coverage-list{display:flex;flex-wrap:wrap;gap:7px}.coverage-note{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+    .intent-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .intent-column{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#fff}
+    .intent-head{display:flex;justify-content:space-between;align-items:center;padding:14px 15px;border-bottom:1px solid var(--border)}
+    .intent-head h4{margin:0}.intent-list{display:grid}
+    .term-row{padding:13px 15px;border-bottom:1px solid var(--border);display:grid;gap:7px}.term-row:last-child{border-bottom:0}
+    .term-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.term-name{font-weight:800;line-height:1.35}
+    .term-meta{display:flex;flex-wrap:wrap;gap:7px;color:var(--muted);font-size:11px}.term-meta strong{color:var(--text)}
+    .term-note{color:#475569;font-size:12px;line-height:1.45}
+    .empty-state{padding:22px;text-align:center;color:var(--muted);font-size:13px}
+    details.raw-evidence{border:1px solid var(--border);border-radius:14px;background:#fff;overflow:hidden}
+    details.raw-evidence summary{cursor:pointer;padding:14px 16px;font-weight:800;display:flex;justify-content:space-between;gap:12px}
+    details.raw-evidence[open] summary{border-bottom:1px solid var(--border)}
+    .table-wrap{max-width:100%;overflow-x:auto}.keyword-table{min-width:860px}
+    .policy-row{display:flex;flex-wrap:wrap;gap:8px}
+    .footer-note{padding:0 4px 20px;color:var(--muted);font-size:12px;text-align:center}
+    @media(max-width:1180px){.signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-summary,.asset-health,.intent-grid{grid-template-columns:1fr}.action-grid{grid-template-columns:1fr}}
+    @media(max-width:720px){.content{padding:16px}.filters,.signal-grid{grid-template-columns:1fr}.panel-header{flex-direction:column}.term-top{flex-direction:column}}
   </style>
 </head>
 <body>
@@ -31,18 +100,84 @@
   <section class="main">
     <header class="topbar"><div class="topbar-title"><h1>Google Asset & Search Insights</h1><p>ข้อมูลจริงจาก PMax Asset Group / Keyword / Search Term</p></div><div class="topbar-actions"><button class="button-primary" type="button">Real Google Ads Insight Data</button><div class="user-box"><div class="user-meta"><strong id="displayName">Administrator</strong><span id="role">ADMIN</span></div><button class="button-secondary" id="logoutButton" type="button">Logout</button></div></div></header>
     <main class="content">
-      <section class="filter-panel"><div class="filter-top"><div><h2>Insight Filters</h2><p>หน้าเฉพาะทางสำหรับ Google Ads ที่ต่างจาก Meta Ads ชัดเจน</p></div><div class="panel-badge" id="updatedAt">รอข้อมูล</div></div><div class="filters"><div class="field"><label for="gameFilter">Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div><div class="field"><label for="accountFilter">Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div></div></section>
-      <section class="kpi-grid"><article class="kpi-card"><span>Top Keywords in Report</span><strong id="keywordKpi">-</strong></article><article class="kpi-card"><span>Search Terms to Review</span><strong id="termKpi">-</strong></article><article class="kpi-card"><span>PMax Asset Groups</span><strong id="assetKpi">-</strong></article><article class="kpi-card"><span>Low Search IS Campaigns</span><strong id="lowIsKpi">-</strong></article><article class="kpi-card"><span>Weak Asset Strength</span><strong id="weakAssetKpi">-</strong></article></section>
-      <article class="panel"><div class="panel-header"><div><h3>Top 10 Search Keywords</h3><p>จัดอันดับ Keyword ที่ระบบยิงจริง โดยเรียงจาก Conversion สูงสุด และยังแยกจาก Search Term ที่ผู้ใช้พิมพ์จริง</p></div><span class="panel-badge">Top 10 Keywords</span></div><div class="panel-body table-wrap"><table class="data-table" style="min-width:1250px"><thead><tr><th>Rank</th><th>Keyword</th><th>Game</th><th>Campaign</th><th>Match Type</th><th>Clicks</th><th>CTR</th><th>Conversions</th><th>CPA</th><th>Search IS</th><th>Recommended Action</th></tr></thead><tbody id="keywordBody"></tbody></table></div></article>
-      <section class="dashboard-grid">
-        <article class="panel"><div class="panel-header"><div><h3>PMax Asset Group Health</h3><p>สิ่งที่ควรดูถ้าระบบเน้นยิง PMax</p></div><span class="panel-badge">Asset Group</span></div><div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Asset Group</th><th>Campaign</th><th>Strength</th><th>Spend</th><th>Conversions</th><th>CPA</th><th>Top Signal</th><th>Insight</th></tr></thead><tbody id="assetBody"></tbody></table></div></article>
-        <article class="panel"><div class="panel-header"><div><h3>Search Term Opportunities</h3><p>สิ่งที่ควรดูถ้าระบบเน้น Search เป็นหลัก</p></div><span class="panel-badge">Search Terms</span></div><div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Term</th><th>Campaign</th><th>Match Type</th><th>Clicks</th><th>CTR</th><th>Conversions</th><th>CPA</th><th>Recommended Action</th></tr></thead><tbody id="termBody"></tbody></table></div></article>
+      <section class="filter-panel">
+        <div class="filter-top">
+          <div><h2>Google Insight Workspace</h2><p>สรุป Risk, PMax Health, Search Opportunity และ Review Queue จากข้อมูลจริงในหน้าเดียว</p></div>
+          <div class="panel-badge" id="updatedAt">รอข้อมูล</div>
+        </div>
+        <div class="filters">
+          <div class="field"><label for="gameFilter">Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
+          <div class="field"><label for="accountFilter">Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+        </div>
       </section>
-      <article class="panel"><div class="panel-header"><div><h3>Recommendation Blocks</h3><p>หน้าตานี้สามารถต่อกับ AI backend ได้ตรง ๆ ในรอบถัดไป</p></div></div><div class="panel-body"><div class="action-list" id="recommendationList"></div></div></article>
-      <footer class="footer-note">AI Marketing Copilot · Google Insight Data · Top 10 Keywords / Asset Group / Search Terms Ready</footer>
+
+      <section class="signal-grid">
+        <article class="signal-card" id="campaignSignalCard" data-tone="info"><span>Campaign Health</span><strong id="campaignSignalKpi">-</strong><p id="campaignSignalNote">รอข้อมูล</p></article>
+        <article class="signal-card" id="assetSignalCard" data-tone="info"><span>PMax Asset Health</span><strong id="assetHealthKpi">-</strong><p id="assetHealthNote">รอข้อมูล</p></article>
+        <article class="signal-card" id="opportunitySignalCard" data-tone="info"><span>Conversion Opportunities</span><strong id="opportunityKpi">-</strong><p>Search Term ที่มี Conversion และ CPA ต่ำกว่า baseline ตาม Intelligence</p></article>
+        <article class="signal-card" id="reviewSignalCard" data-tone="watch"><span>Search Term Review Queue</span><strong id="reviewKpi">-</strong><p>มี Click แต่ยังไม่มี Google Ads Conversion — ต้องตรวจ Intent เพิ่ม</p></article>
+      </section>
+
+      <article class="panel">
+        <div class="panel-header"><div><h3>AI Snapshot</h3><p>อ่านภาพรวมก่อนลงรายละเอียด เพื่อเห็น Risk และ Action ที่ควรตรวจเร็วขึ้น</p></div><span class="panel-badge">Evidence Only</span></div>
+        <div class="panel-body">
+          <div class="ai-summary">
+            <div class="summary-copy"><h4 id="aiScopeTitle">Google AI Intelligence</h4><p id="aiExecutiveSummary">กำลังโหลดข้อมูล...</p></div>
+            <div class="summary-stack" id="aiSignalStack"></div>
+          </div>
+          <div class="action-grid" id="recommendedActions" style="margin-top:16px"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header"><div><h3>PMax Asset Health</h3><p>ใช้ Google Ad Strength จริง พร้อม Coverage ของ Asset Group</p></div><span class="panel-badge" id="assetCountBadge">0 Asset Groups</span></div>
+        <div class="panel-body">
+          <div class="asset-health">
+            <div class="table-wrap">
+              <table class="asset-table"><thead><tr><th>Asset Group</th><th>Strength</th><th>Assets</th><th>Spend</th><th>Conversions</th><th>CPA</th></tr></thead><tbody id="assetBody"></tbody></table>
+            </div>
+            <div class="coverage-box">
+              <h4>Asset Coverage</h4>
+              <div class="coverage-list" id="assetCoverage"></div>
+              <p class="coverage-note" id="assetCoverageNote">เลือก Scope เพื่อดู Field Type ที่มีอยู่จริงใน Asset Group</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header"><div><h3>Search Intent Signals</h3><p>แยกสิ่งที่มี Conversion ออกจากสิ่งที่ต้อง Review เพื่อลดการตีความผิด</p></div><span class="panel-badge" id="searchTermCountBadge">0 Search Terms</span></div>
+        <div class="panel-body">
+          <div class="intent-grid">
+            <section class="intent-column">
+              <div class="intent-head"><h4>Conversion Opportunities</h4><span class="chip blue" id="opportunityCountBadge">0</span></div>
+              <div class="intent-list" id="opportunityList"></div>
+            </section>
+            <section class="intent-column">
+              <div class="intent-head"><h4>Review Queue</h4><span class="chip amber" id="reviewCountBadge">0</span></div>
+              <div class="intent-list" id="reviewList"></div>
+            </section>
+          </div>
+        </div>
+      </article>
+
+      <details class="raw-evidence" id="keywordEvidence">
+        <summary><span>Search Campaign / Keyword Evidence</span><span class="chip slate" id="keywordStatusBadge">PMax-only</span></summary>
+        <div class="panel-body">
+          <p id="keywordEvidenceNote" style="margin:0 0 12px;color:#697386;font-size:12px">ถ้า Account ไม่มี Search Campaign ตาราง Keyword สามารถเป็น 0 ได้ตามปกติ</p>
+          <div class="table-wrap"><table class="keyword-table"><thead><tr><th>Keyword</th><th>Campaign</th><th>Match Type</th><th>Clicks</th><th>CTR</th><th>Conversions</th><th>CPA</th><th>Search IS</th></tr></thead><tbody id="keywordBody"></tbody></table></div>
+        </div>
+      </details>
+
+      <article class="panel">
+        <div class="panel-header"><div><h3>Evidence Policy</h3><p>Guardrail ที่ใช้กับ Google Intelligence ชุดนี้</p></div></div>
+        <div class="panel-body"><div class="policy-row" id="evidencePolicy"></div></div>
+      </article>
+
+      <footer class="footer-note">AI Marketing Copilot · Google Asset / Search Intelligence · Evidence Only</footer>
     </main>
   </section>
 </div>
-<script src="../assets/js/config.js?v=5.7.3"></script><script src="../assets/js/auth.js?v=5.7.3"></script><script src="../assets/js/sidebar.js?v=5.7.3"></script><script src="../assets/js/google-common.js?v=5.7.3"></script><script src="../assets/js/google-insights.js?v=5.7.3"></script>
+<script src="../assets/js/config.js?v=5.7.4"></script><script src="../assets/js/auth.js?v=5.7.4"></script><script src="../assets/js/sidebar.js?v=5.7.4"></script><script src="../assets/js/google-common.js?v=5.7.4"></script><script src="../assets/js/google-insights.js?v=5.7.4"></script>
 </body>
 </html>

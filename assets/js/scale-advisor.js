@@ -62,7 +62,7 @@
   function renderCard(row) {
     const decision = upper(value(row, ['Advisor_Decision'], 'HOLD'));
     const status = upper(value(row, ['Status'], 'INSUFFICIENT_DATA'));
-    const cardClass = decision === 'SCALE_READY' ? 'is-ready' : decision === 'TEST_SCALE' ? 'is-test' : ['DO_NOT_SCALE', 'HOLD_REVIEW'].includes(decision) ? 'is-risk' : '';
+    const cardClass = decision === 'SCALE_READY' ? 'is-ready' : ['TEST_SCALE','GOOGLE_SCALE_SIGNAL'].includes(decision) ? 'is-test' : ['DO_NOT_SCALE', 'HOLD_REVIEW'].includes(decision) ? 'is-risk' : '';
     const budget = D.num(value(row, ['Recommended_Budget_Step_Pct']));
     const guardrail = row.Guardrail || {};
     const baseline = row.Baseline || {};
@@ -87,7 +87,7 @@
       </div>
 
       <div class="advisor-kpis">
-        <div class="advisor-kpi"><span>Budget Step</span><strong>${budget > 0 ? `+${D.integer(budget)}%` : '0%'}</strong></div>
+        <div class="advisor-kpi"><span>Budget Step</span><strong>${upper(value(row,['Platform']))==='GOOGLE' ? 'ไม่กำหนด' : (budget > 0 ? `+${D.integer(budget)}%` : '0%')}</strong></div>
         <div class="advisor-kpi"><span>Confidence</span><strong>${esc(value(row, ['Confidence'], '-'))}</strong></div>
         <div class="advisor-kpi"><span>${esc(value(row, ['Main_Metric_Label', 'Main_Metric'], 'Main Metric'))} 7D</span><strong>${esc(value(baseline, ['value_7d'], value(row, ['Trend_7D'], '-')))}</strong></div>
         <div class="advisor-kpi"><span>Spend ล่าสุด</span><strong>฿${D.money(value(row, ['Spend']))}</strong></div>
@@ -155,7 +155,7 @@
     }, {});
 
     $('scaleReadyCount').textContent = D.integer(counts.SCALE_READY || 0);
-    $('testScaleCount').textContent = D.integer(counts.TEST_SCALE || 0);
+    $('testScaleCount').textContent = D.integer((counts.TEST_SCALE || 0) + (counts.GOOGLE_SCALE_SIGNAL || 0));
     $('holdCount').textContent = D.integer((counts.HOLD || 0) + (counts.HOLD_REVIEW || 0));
     $('blockedCount').textContent = D.integer((counts.DO_NOT_SCALE || 0) + (counts.INSUFFICIENT_DATA || 0));
     $('resultBadge').textContent = `${D.integer(rows.length)} campaigns`;
@@ -168,11 +168,17 @@
 
     try {
       response = await D.load({ refresh });
-      allRows = D.rows(response, 'scale_advisor');
+      const metaRows = D.rows(response, 'scale_advisor');
+      const googleRows = Array.isArray(response?.dashboard?.google_ads_scale_advisor?.rows)
+        ? response.dashboard.google_ads_scale_advisor.rows
+        : [];
+      allRows = [...metaRows, ...googleRows];
       uniqueOptions('gameFilter', allRows, (row) => clean(value(row, ['Game_Name', 'Game_ID'])));
       uniqueOptions('accountFilter', allRows, (row) => clean(value(row, ['Account_Name', 'Account_ID'])));
       const meta = response?.scale_up_advisor_cache || {};
-      $('dataDateBadge').textContent = `Data: ${meta.data_date || allRows[0]?.Date || '-'}`;
+      const googleMeta = response?.google_ads_intelligence_cache || {};
+      const dates = [meta.data_date, googleMeta.data_date, allRows[0]?.Date].filter(Boolean).sort();
+      $('dataDateBadge').textContent = `Data: ${dates.at(-1) || '-'}`;
       $('updatedAt').textContent = meta.generated_at ? `Updated: ${new Date(meta.generated_at).toLocaleString('th-TH')}` : 'Updated: -';
       setUser();
       render();

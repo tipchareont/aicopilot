@@ -8,8 +8,8 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 5;
-  const cacheKey = () => `ai_marketing_copilot_action_center_v5_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const CACHE_VERSION = 6;
+  const cacheKey = () => `ai_marketing_copilot_action_center_v6_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
   function readCache(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||'null');return Number(x?.version||0)===CACHE_VERSION&&x?.data?x:null}catch{return null}}
@@ -49,7 +49,8 @@
     IMPROVED:'ผลดีขึ้น',
     WORSE:'ผลแย่ลง',
     STABLE:'ผลทรงตัว',
-    INCONCLUSIVE:'ยังสรุปไม่ได้'
+    INCONCLUSIVE:'ยังสรุปไม่ได้',
+    OPPORTUNITY:'โอกาสที่ควรพิจารณา'
   });
 
   const ACTION_TYPE_LABELS = Object.freeze({
@@ -80,7 +81,9 @@
     RESULTS:'จำนวนผลลัพธ์',
     COMPLETE_REGISTER:'จำนวนลงทะเบียนสำเร็จ',
     LANDING_PAGE_VIEWS:'Landing Page Views',
-    SPEND:'ค่าใช้จ่าย'
+    SPEND:'ค่าใช้จ่าย',
+    GOOGLE_CPA:'ค่าใช้จ่ายต่อ Google Ads Conversion',
+    GOOGLE_CONVERSIONS:'Google Ads Conversions'
   });
 
   const statusLabel = (value) => STATUS_LABELS[upper(value)] || clean(value).replace(/_/g,' ') || '-';
@@ -134,7 +137,11 @@
 
   function decisionCard(row){
     const status=upper(row.Issue_Status),active=row.has_active_action===true;
-    return `<article class="decision-card is-${status.toLowerCase()}"><div class="decision-head"><div class="decision-title"><h3>${esc(row.Entity_Name||'-')}</h3><p>${esc(row.Game_Name||row.Game_ID)} · ${esc(row.Account_Name||row.Account_ID)} · ${esc(row.Objective)} · ${esc(row.Phase)}</p></div><div class="badge-row"><span class="issue-badge ${statusClass(status)}">${esc(statusLabel(status))}</span><span class="issue-badge watch">ลำดับความสำคัญ ${num(row.Priority_Score)}</span>${active?'<span class="action-status">มี Action แล้ว</span>':''}</div></div><div class="decision-reason"><strong>ปัญหาที่พบ</strong><br/>${esc(row.Issue_Reason||'-')}</div><div class="decision-recommendation"><strong>คำแนะนำจาก AI</strong>${esc(row.AI_Recommendation||'-')}</div>${similarCases(row.similar_cases)}<div class="decision-actions"><button class="button-primary" data-record="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">${active?'บันทึกแล้ว':'บันทึก Action'}</button><button class="button-danger-ghost" data-dismiss="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">ไม่ดำเนินการ</button></div></article>`;
+    const platform=upper(row.Platform||'META');
+    const priority=row.Priority_Score!==null&&row.Priority_Score!==undefined&&row.Priority_Score!==''?`<span class="issue-badge watch">ลำดับความสำคัญ ${num(row.Priority_Score)}</span>`:'';
+    const context=[row.Game_Name||row.Game_ID,row.Account_Name||row.Account_ID,row.Objective,row.Phase].filter(Boolean).join(' · ');
+    const heading=status==='OPPORTUNITY'?'โอกาสที่พบ':'ประเด็นที่พบ';
+    return `<article class="decision-card is-${status.toLowerCase()}"><div class="decision-head"><div class="decision-title"><h3>${esc(row.Entity_Name||'-')}</h3><p>${esc(context)}</p></div><div class="badge-row"><span class="issue-badge">${esc(platform)}</span><span class="issue-badge ${statusClass(status)}">${esc(statusLabel(status))}</span>${priority}${active?'<span class="action-status">มี Action แล้ว</span>':''}</div></div><div class="decision-reason"><strong>${heading}</strong><br/>${esc(row.Issue_Reason||'-')}</div><div class="decision-recommendation"><strong>${platform==='GOOGLE'?'คำแนะนำจาก Google Intelligence':'คำแนะนำจาก AI'}</strong>${esc(row.AI_Recommendation||'-')}</div>${similarCases(row.similar_cases)}<div class="decision-actions"><button class="button-primary" data-record="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">${active?'บันทึกแล้ว':'บันทึก Action'}</button><button class="button-danger-ghost" data-dismiss="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">ไม่ดำเนินการ</button></div></article>`;
   }
 
   function checkpoint(label,metric,review){
@@ -167,6 +174,7 @@
 
   function actionCard(row){
     const status=upper(row.Action_Status),outcome=upper(row.Outcome_Status||'PENDING');
+    const platform=upper(row.Platform||(upper(row.Action_Source).startsWith('GOOGLE')?'GOOGLE':'META'));
     const review1=reviewData(row,1),review3=reviewData(row,3),review7=reviewData(row,7);
     const isClosed=status==='CLOSED';
     const actionButtons=[
@@ -182,6 +190,7 @@
           <p>${esc(actionTypeLabel(row.Action_Type))} · ผู้รับผิดชอบ: ${esc(row.Owner||'-')} · เริ่ม ${dateText(row.Action_Date)}</p>
         </div>
         <div class="badge-row">
+          <span class="issue-badge">${esc(platform)}</span>
           <span class="action-status ${statusClass(status)}">${esc(statusLabel(status))}</span>
           <span class="outcome-badge ${statusClass(outcome)}">${esc(statusLabel(outcome))}</span>
         </div>
@@ -199,7 +208,7 @@
             </div>
             <div class="baseline-grid">
               <div><span>ตัวชี้วัดก่อนทำ</span><strong>${esc(metricLabel(row.Baseline_Metric))} ${hasValue(row.Baseline_Value)?num(row.Baseline_Value,2):'-'}</strong></div>
-              <div><span>ข้อมูลช่วง Baseline</span><strong>Spend ${money(row.Baseline_Spend||0)} · Results ${num(row.Baseline_Results||0)}</strong></div>
+              <div><span>ข้อมูลช่วง Baseline</span><strong>Spend ${money(row.Baseline_Spend||0)} · ${platform==='GOOGLE'?'Google Ads Conversions':'Results'} ${num(row.Baseline_Results||0)}</strong></div>
             </div>
           </div>
           <div class="checkpoint-section">
@@ -272,8 +281,8 @@
   function clearSelection(){state.selected=null;$('selectedIssue').innerHTML='<strong>ยังไม่ได้เลือกปัญหา</strong><p>กด “บันทึก Action” จากรายการด้านซ้าย</p>';$('actionForm').reset();$('actionOwner').value=localStorage.getItem('display_name')||localStorage.getItem('username')||'';$('saveActionButton').disabled=true;$('actionMessage').textContent='';}
   function applyMutation(row){if(!row)return;const status=upper(row.Action_Status);let actions=[...(state.data.actions||[])].filter(x=>x.Action_ID!==row.Action_ID);if(!['CANCELLED','DISMISSED'].includes(status))actions.unshift(row);state.data.actions=actions;if(status==='DISMISSED'){state.data.decisions=(state.data.decisions||[]).filter(d=>d.Decision_Key!==row.Decision_Key);}else{const active=!['CANCELLED','CLOSED'].includes(status);state.data.decisions=(state.data.decisions||[]).map(d=>d.Decision_Key===row.Decision_Key?{...d,has_active_action:active}:d);}const s=state.data.summary||{};s.total_actions=actions.length;s.needs_action=(state.data.decisions||[]).filter(d=>!d.has_active_action).length;s.in_progress=actions.filter(a=>['IN_PROGRESS','PENDING_REVIEW'].includes(upper(a.Action_Status))).length;s.outcome_ready=actions.filter(a=>upper(a.Action_Status)==='OUTCOME_READY').length;s.improved=actions.filter(a=>upper(a.Outcome_Status)==='IMPROVED').length;state.data.summary=s;saveCache(state.data);render();}
 
-  async function createAction(event){event.preventDefault();if(!state.selected)return;const btn=$('saveActionButton');btn.disabled=true;$('actionMessage').className='form-message';$('actionMessage').textContent='กำลังบันทึก Action และ Baseline...';try{const r=await request({action:'CREATE_ACTION',decision_key:state.selected.Decision_Key,game_id:state.selected.Game_ID,account_id:state.selected.Account_ID,action_type:$('actionType').value,action_detail:$('actionDetail').value,action_date:$('actionDate').value,owner:$('actionOwner').value,expected_result:$('expectedResult').value,user_note:$('userNote').value});applyMutation(r.action);$('actionMessage').className='form-message success';$('actionMessage').textContent='บันทึก Action เรียบร้อย ระบบจะ Review ผลที่ 1 / 3 / 7 วัน';clearSelection();}catch(e){$('actionMessage').className='form-message error';$('actionMessage').textContent=e.message;btn.disabled=false;}}
-  async function dismissDecision(key){const row=(state.data?.decisions||[]).find(d=>d.Decision_Key===key);if(!row||!confirm(`เลือกไม่ดำเนินการกับปัญหา “${row.Entity_Name}” ใช่หรือไม่?`))return;try{const r=await request({action:'DISMISS_DECISION',decision_key:key,game_id:row.Game_ID,account_id:row.Account_ID,dismiss_reason:'ทีมตรวจสอบแล้วและเลือกไม่ดำเนินการในรอบนี้'});applyMutation(r.action);}catch(e){alert(e.message)}}
+  async function createAction(event){event.preventDefault();if(!state.selected)return;const btn=$('saveActionButton');btn.disabled=true;$('actionMessage').className='form-message';$('actionMessage').textContent='กำลังบันทึก Action และ Baseline...';try{const r=await request({action:'CREATE_ACTION',decision_key:state.selected.Decision_Key,game_id:state.selected.Game_ID,account_id:state.selected.Account_ID,platform:state.selected.Platform||'META',action_type:$('actionType').value,action_detail:$('actionDetail').value,action_date:$('actionDate').value,owner:$('actionOwner').value,expected_result:$('expectedResult').value,user_note:$('userNote').value});applyMutation(r.action);$('actionMessage').className='form-message success';$('actionMessage').textContent='บันทึก Action เรียบร้อย ระบบจะ Review ผลที่ 1 / 3 / 7 วัน';clearSelection();}catch(e){$('actionMessage').className='form-message error';$('actionMessage').textContent=e.message;btn.disabled=false;}}
+  async function dismissDecision(key){const row=(state.data?.decisions||[]).find(d=>d.Decision_Key===key);if(!row||!confirm(`เลือกไม่ดำเนินการกับปัญหา “${row.Entity_Name}” ใช่หรือไม่?`))return;try{const r=await request({action:'DISMISS_DECISION',decision_key:key,game_id:row.Game_ID,account_id:row.Account_ID,platform:row.Platform||'META',dismiss_reason:'ทีมตรวจสอบแล้วและเลือกไม่ดำเนินการในรอบนี้'});applyMutation(r.action);}catch(e){alert(e.message)}}
   async function updateAction(id,status){if(!confirm(`เปลี่ยนสถานะ Action เป็น “${statusLabel(status)}” ใช่หรือไม่?`))return;try{const r=await request({action:'UPDATE_ACTION',action_id:id,action_status:status});applyMutation(r.action);}catch(e){alert(e.message)}}
 
   function setTab(tab){state.tab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('decisionsView').classList.toggle('hidden',tab!=='decisions');$('actionsView').classList.toggle('hidden',tab!=='actions');$('closedActionsView').classList.toggle('hidden',tab!=='closed');$('learningView').classList.toggle('hidden',tab!=='learning');}

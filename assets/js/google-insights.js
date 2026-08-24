@@ -212,45 +212,62 @@
 
     const recommendationList = document.getElementById('recommendationList');
     const cards = [];
+    const aiScopes = Array.isArray(result?.ai_intelligence?.scopes)
+      ? result.ai_intelligence.scopes
+      : [];
 
-    if (assetGroups.length) {
+    if (aiScopes.length) {
+      for (const scope of aiScopes) {
+        const analysis = scope.ai_analysis || {};
+        const campaignSignals = Array.isArray(scope.campaign_signals) ? scope.campaign_signals : [];
+        const scaleCount = campaignSignals.filter(row => clean(row.signal).toUpperCase() === 'SCALE_SIGNAL').length;
+        const riskCount = campaignSignals.filter(row => ['CPA_WORSENING','NO_CONVERSION_CURRENT_7D'].includes(clean(row.signal).toUpperCase())).length;
+
+        cards.push(`
+          <article class="action-card" data-level="${riskCount ? 'medium' : (scaleCount ? 'good' : '')}">
+            <div class="action-head">
+              <strong>Google AI Intelligence</strong>
+              <span>${escapeHtml(scope.Game_Name || scope.Game_ID)} · ${escapeHtml(scope.Account_Name || scope.Account_ID)}</span>
+            </div>
+            <p><strong>สรุป:</strong> ${escapeHtml(analysis.Executive_Summary || 'ข้อมูลยังไม่เพียงพอ')}</p>
+            <p><strong>PMax:</strong> ${escapeHtml(analysis.PMax_Asset_Assessment || 'ข้อมูลยังไม่เพียงพอ')}</p>
+            <p><strong>Search Term:</strong> ${escapeHtml(analysis.Search_Term_Opportunity || 'ข้อมูลยังไม่เพียงพอ')}</p>
+            <p><strong>Risk:</strong> ${escapeHtml(analysis.Biggest_Risk || 'ยังไม่พบ Risk หลัก')}</p>
+            <p><strong>Scale:</strong> ${escapeHtml(analysis.Scale_Recommendation || 'ยังไม่มี Scale Signal')}</p>
+          </article>
+        `);
+
+        const actions = Array.isArray(analysis.Recommended_Actions) ? analysis.Recommended_Actions : [];
+        actions.slice(0,3).forEach(row => {
+          cards.push(`
+            <article class="action-card" data-level="${clean(row.priority).toLowerCase() === 'high' ? 'medium' : ''}">
+              <div class="action-head"><strong>${escapeHtml(row.priority || 'MEDIUM')} · Recommended Action</strong></div>
+              <p>${escapeHtml(row.action || '-')}</p>
+              ${Array.isArray(row.evidence) && row.evidence.length
+                ? `<p><strong>Evidence:</strong> ${escapeHtml(row.evidence.join(' • '))}</p>`
+                : ''}
+            </article>
+          `);
+        });
+      }
+    } else {
       cards.push(`
-        <article class="action-card" data-level="${
-          num(summary.weak_asset_strength_count) > 0 ? 'medium' : 'good'
-        }">
-          <div class="action-head">
-            <strong>PMax Asset Group Health</strong>
-            <span>${UI.number(assetGroups.length)} groups</span>
-          </div>
-          <p>${
-            num(summary.weak_asset_strength_count) > 0
-              ? `พบ ${UI.number(summary.weak_asset_strength_count)} Asset Group ที่ Ad Strength เป็น Average / Poor / Incomplete`
-              : 'Asset Group ที่มีข้อมูลอยู่ในสถานะ Good / Excellent — ยังไม่มี Google-specific AI scoring ในขั้นนี้'
-          }</p>
+        <article class="action-card" data-level="medium">
+          <div class="action-head"><strong>Google AI Intelligence</strong></div>
+          <p>ยังไม่มี google_ads_intelligence_latest ใน Scope นี้</p>
         </article>
       `);
     }
 
     cards.push(`
-      <article class="action-card" data-level="${
-        num(summary.search_terms_to_review) > 0 ? 'medium' : 'good'
-      }">
+      <article class="action-card" data-level="${num(summary.search_terms_to_review) > 0 ? 'medium' : 'good'}">
         <div class="action-head">
           <strong>Search Term Review Queue</strong>
           <span>${UI.number(summary.search_terms_to_review || 0)}</span>
         </div>
-        <p>นับจาก Search Term ที่มี Click แต่ยังไม่มี Conversion เท่านั้น เป็น Data Signal ไม่ใช่ AI Recommendation</p>
+        <p>Search Term ที่มี Click แต่ยังไม่มี Conversion เป็น Review Queue เท่านั้น ระบบไม่สรุปว่าเป็น Waste หรือควรทำ Negative Keyword โดยอัตโนมัติ</p>
       </article>
     `);
-
-    if (!keywords.length) {
-      cards.push(`
-        <article class="action-card">
-          <div class="action-head"><strong>Search Keyword</strong></div>
-          <p>Account นี้ยังไม่มี Search Keyword ในช่วงข้อมูลที่อ่านได้ ซึ่งสอดคล้องกับโครงสร้าง PMax-only ปัจจุบัน</p>
-        </article>
-      `);
-    }
 
     recommendationList.innerHTML = cards.join('');
   }

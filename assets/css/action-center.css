@@ -25,3 +25,6 @@
 .closed-actions-panel .panel-header{background:linear-gradient(180deg,#fbfdff 0%,#fff 100%)}
 .closed-actions-panel .action-card .action-actions{display:none}
 @media(max-width:760px){.action-details>summary{align-items:flex-start}.action-details-chevron{flex:0 0 auto}}
+
+/* V5.7.0 multi-platform */
+.issue-badge{white-space:nowrap;}

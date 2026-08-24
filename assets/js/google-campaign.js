@@ -97,11 +97,9 @@
       '<tr><td colspan="16" class="table-empty">ไม่พบข้อมูล Campaign</td></tr>';
   };
 
-  async function loadData({preserveFilters = false} = {}) {
+  async function loadData() {
     try {
       setLoading('กำลังโหลดข้อมูลจริง...');
-      const current = filters();
-
       // Campaign page needs only Campaign API.
       // Use yesterday in Asia/Bangkok as the upper bound so the page does not
       // wait for a redundant Overview API request before loading the table.
@@ -115,21 +113,19 @@
       const endDate = UI.shiftDate(todayBangkok, -1);
       const startDate = UI.shiftDate(endDate, -34);
 
+      // V5.7.3 loads all permitted Google rows once.
+      // Game / Account / Type / Status filters are client-side only.
       const payload = await UI.fetchCampaigns(
-        {game: current.game, account: current.account},
+        {},
         {startDate, endDate, limit: 5000}
       );
       dailyRows = payload.rows || [];
       latestDate = payload.data_date || latestDate;
 
-      if (!preserveFilters) {
-        UI.fillSelectOptions(gameFilter, UI.gameOptions(dailyRows));
-        UI.fillSelectOptions(accountFilter, UI.accountOptions(dailyRows, gameFilter?.value || ''));
-        UI.fillSelect(typeFilter, ['Search','PMax','Display','Video','Demand Gen']);
-        UI.fillSelect(statusFilter, ['Active','Learning','Paused']);
-      } else {
-        UI.fillSelectOptions(accountFilter, UI.accountOptions(dailyRows, gameFilter?.value || ''));
-      }
+      UI.fillSelectOptions(gameFilter, UI.gameOptions(dailyRows));
+      UI.fillSelectOptions(accountFilter, UI.accountOptions(dailyRows, ''));
+      UI.fillSelect(typeFilter, ['Search','PMax','Display','Video','Demand Gen']);
+      UI.fillSelect(statusFilter, ['Active','Learning','Paused']);
 
       render();
     } catch (error) {
@@ -149,8 +145,15 @@
       localStorage.getItem('display_name') || localStorage.getItem('username') || 'User';
     document.getElementById('role').textContent = localStorage.getItem('role') || 'USER';
 
-    gameFilter?.addEventListener('change', () => loadData({preserveFilters:true}));
-    accountFilter?.addEventListener('change', () => loadData({preserveFilters:true}));
+    gameFilter?.addEventListener('change', () => {
+      if (accountFilter) accountFilter.value = '';
+      UI.fillSelectOptions(
+        accountFilter,
+        UI.accountOptions(dailyRows, gameFilter?.value || '')
+      );
+      render();
+    });
+    accountFilter?.addEventListener('change', render);
     typeFilter?.addEventListener('change', render);
     statusFilter?.addEventListener('change', render);
     document.getElementById('logoutButton')?.addEventListener('click', () => window.Auth.redirectToLogin());

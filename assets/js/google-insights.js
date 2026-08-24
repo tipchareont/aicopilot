@@ -6,6 +6,7 @@
   const accountFilter = document.getElementById('accountFilter');
 
   let scopeRows = [];
+  let fullResult = null;
 
   const clean = UI.clean;
   const num = UI.num;
@@ -57,38 +58,101 @@
     return 'ตรวจสถานะ Asset เพิ่มเติม';
   };
 
-  async function ensureScopeRows() {
-    if (scopeRows.length) return;
+  const buildScopeRows = (result) => {
+    const rows = [];
+    const push = (row) => {
+      const gameId = clean(row?.Game_ID);
+      const accountId = clean(row?.Account_ID);
+      if (!gameId || !accountId) return;
+      rows.push({
+        gameId,
+        game: clean(row?.Game_Name) || gameId,
+        accountId,
+        account: clean(row?.Account_Name) || accountId,
+      });
+    };
 
-    const overview = await UI.fetchOverview({});
-    const endDate =
-      overview.data_date ||
-      new Date().toISOString().slice(0,10);
+    [
+      ...(Array.isArray(result?.asset_groups) ? result.asset_groups : []),
+      ...(Array.isArray(result?.search_campaigns) ? result.search_campaigns : []),
+      ...(Array.isArray(result?.keywords) ? result.keywords : []),
+      ...(Array.isArray(result?.search_terms) ? result.search_terms : []),
+      ...(Array.isArray(result?.pmax_campaigns) ? result.pmax_campaigns : []),
+      ...(Array.isArray(result?.ai_intelligence?.scopes)
+        ? result.ai_intelligence.scopes
+        : []),
+    ].forEach(push);
 
-    const campaign = await UI.fetchCampaigns(
-      {},
-      {
-        startDate:endDate,
-        endDate,
-        limit:5000,
-      }
+    const deduped = new Map();
+    for (const row of rows) {
+      deduped.set(`${row.gameId}||${row.accountId}`, row);
+    }
+    return [...deduped.values()];
+  };
+
+  const scopedResult = () => {
+    const source = fullResult || {};
+    const filterRows = (rows) => (Array.isArray(rows) ? rows : []).filter((row) => {
+      const filters = current();
+      if (filters.game && clean(row.Game_ID) !== filters.game) return false;
+      if (filters.account && clean(row.Account_ID) !== filters.account) return false;
+      return true;
+    });
+
+    const assetGroups = filterRows(source.asset_groups);
+    const searchCampaigns = filterRows(source.search_campaigns);
+    const keywords = filterRows(source.keywords);
+    const searchTerms = filterRows(source.search_terms);
+    const pmaxCampaigns = filterRows(source.pmax_campaigns);
+    const aiScopes = filterRows(source?.ai_intelligence?.scopes);
+
+    const weak = new Set(['AVERAGE','POOR','INCOMPLETE']);
+    const reviewTerms = searchTerms.filter(
+      (row) => num(row.Clicks) > 0 && num(row.Conversions) <= 0
     );
 
-    scopeRows = campaign.rows || [];
+    const rawAvailable =
+      assetGroups.length > 0 ||
+      searchCampaigns.length > 0 ||
+      keywords.length > 0 ||
+      searchTerms.length > 0;
 
-    UI.fillSelectOptions(
-      gameFilter,
-      UI.gameOptions(scopeRows)
-    );
+    const aiAvailable = aiScopes.length > 0;
 
-    UI.fillSelectOptions(
-      accountFilter,
-      UI.accountOptions(
-        scopeRows,
-        gameFilter?.value || ''
-      )
-    );
-  }
+    return {
+      ...source,
+      data_available:rawAvailable,
+      ai_intelligence_available:aiAvailable,
+      message:rawAvailable
+        ? 'Google Ads Insight Data พร้อมใช้งานจากข้อมูลจริง'
+        : (aiAvailable
+          ? 'ยังไม่มี Raw Google Insight ใน Scope นี้ แต่ Google AI Intelligence Cache พร้อมใช้งาน'
+          : (source.message || 'ยังไม่มีข้อมูลใน Scope นี้')),
+      summary:{
+        asset_group_count:assetGroups.length,
+        asset_link_count:assetGroups.reduce(
+          (sum,row) => sum + num(row.Asset_Count), 0
+        ),
+        search_campaign_count:searchCampaigns.length,
+        keyword_count:keywords.length,
+        search_term_count:searchTerms.length,
+        search_terms_to_review:reviewTerms.length,
+        weak_asset_strength_count:assetGroups.filter(
+          (row) => weak.has(clean(row.Ad_Strength).toUpperCase())
+        ).length,
+      },
+      pmax_campaigns:pmaxCampaigns,
+      asset_groups:assetGroups,
+      search_campaigns:searchCampaigns,
+      keywords,
+      search_terms:searchTerms,
+      ai_intelligence:{
+        ...(source.ai_intelligence || {}),
+        scopes:aiScopes,
+      },
+    };
+  };
+
 
   function render(result) {
     const summary = result.summary || {};
@@ -277,9 +341,25 @@
       document.getElementById('updatedAt').textContent =
         'กำลังโหลดข้อมูลจริง...';
 
-      const result = await UI.fetchInsights(current());
+      // V5.7.3: exactly one n8n execution for this page.
+      // No Overview/Campaign preflight requests are needed for filter options.
+      fullResult = await UI.fetchInsights({});
+      scopeRows = buildScopeRows(fullResult);
 
-      if (!result.data_available) {
+      UI.fillSelectOptions(
+        gameFilter,
+        UI.gameOptions(scopeRows)
+      );
+
+      UI.fillSelectOptions(
+        accountFilter,
+        UI.accountOptions(scopeRows, '')
+      );
+
+      const result = scopedResult();
+
+      // Render AI Intelligence even when raw Asset/Search rows are absent.
+      if (!result.data_available && !result.ai_intelligence_available) {
         document.getElementById('updatedAt').textContent =
           `ข้อมูลล่าสุด ${result.data_date || '-'}`;
 
@@ -291,13 +371,10 @@
 
         document.getElementById('keywordBody').innerHTML =
           emptyRow(11, result.message || 'ยังไม่มีข้อมูล');
-
         document.getElementById('assetBody').innerHTML =
           emptyRow(8, result.message || 'ยังไม่มีข้อมูล');
-
         document.getElementById('termBody').innerHTML =
           emptyRow(8, result.message || 'ยังไม่มีข้อมูล');
-
         document.getElementById('recommendationList').innerHTML = `
           <article class="action-card" data-level="medium">
             <div class="action-head"><strong>ยังไม่มี Google Insight Data</strong></div>
@@ -321,10 +398,8 @@
 
       document.getElementById('keywordBody').innerHTML =
         emptyRow(11, error?.message || 'Google Ads API Error');
-
       document.getElementById('assetBody').innerHTML =
         emptyRow(8, error?.message || 'Google Ads API Error');
-
       document.getElementById('termBody').innerHTML =
         emptyRow(8, error?.message || 'Google Ads API Error');
     }
@@ -340,10 +415,8 @@
       localStorage.getItem('role') ||
       'USER';
 
-    await ensureScopeRows();
-
-    gameFilter?.addEventListener('change', async () => {
-      accountFilter.value = '';
+    gameFilter?.addEventListener('change', () => {
+      if (accountFilter) accountFilter.value = '';
       UI.fillSelectOptions(
         accountFilter,
         UI.accountOptions(
@@ -351,13 +424,12 @@
           gameFilter?.value || ''
         )
       );
-      await loadInsights();
+      if (fullResult) render(scopedResult());
     });
 
-    accountFilter?.addEventListener(
-      'change',
-      loadInsights
-    );
+    accountFilter?.addEventListener('change', () => {
+      if (fullResult) render(scopedResult());
+    });
 
     document
       .getElementById('logoutButton')

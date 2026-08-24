@@ -8,6 +8,7 @@
 
   let allRows = [];
   let latestDate = '';
+  let intelligenceSummary = {};
 
   const currentFilters = () => ({
     game: gameFilter?.value || '',
@@ -113,8 +114,25 @@
 
     renderTrend(scoped.history);
 
+    const signals = Array.isArray(intelligenceSummary?.campaign_signals)
+      ? intelligenceSummary.campaign_signals.filter((row) => {
+          if (filters.game && row.Game_ID !== filters.game) return false;
+          if (filters.account && String(row.Account_ID || '') !== filters.account) return false;
+          return true;
+        })
+      : [];
+
     document.getElementById('alertList').innerHTML =
-      `<div class="ai-placeholder"><div><strong>ยังไม่มี Google Ads Intelligence Alert</strong><p>หน้านี้แสดง Performance จริงจาก Google Ads API แล้ว แต่ยังไม่ได้เชื่อม Google-specific scoring/AI alert เพื่อป้องกันการสร้าง Insight ที่ไม่มีหลักฐาน</p></div></div>`;
+      signals.length
+        ? signals.map((row) => `
+            <div class="ai-placeholder">
+              <div>
+                <strong>${row.signal || 'GOOGLE_SIGNAL'} · ${row.Campaign_Name || row.Campaign_ID || '-'}</strong>
+                <p>${row.evidence || 'มี Google Intelligence Signal จากข้อมูลจริง'}</p>
+              </div>
+            </div>
+          `).join('')
+        : `<div class="ai-placeholder"><div><strong>ยังไม่มี Google Campaign Signal ใน Scope นี้</strong><p>ระบบจะแสดงเฉพาะ Signal ที่มีหลักฐานจาก google_ads_intelligence_latest โดยไม่สร้าง Alert เพิ่มเอง</p></div></div>`;
 
     document.getElementById('campaignBody').innerHTML =
       rows.map((row) => `<tr>
@@ -130,30 +148,35 @@
       '<tr><td colspan="8" class="table-empty">ไม่พบ Campaign ใน Filter นี้</td></tr>';
   };
 
-  async function loadData({preserveFilters = false} = {}) {
+  async function loadData() {
     try {
       setLoading();
-      const filters = currentFilters();
-      const overview = await UI.fetchOverview(filters);
-      latestDate = overview.data_date || latestDate;
 
-      const endDate = latestDate || new Date().toISOString().slice(0,10);
+      const todayBangkok = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+
+      const endDate = UI.shiftDate(todayBangkok, -1);
       const startDate = UI.shiftDate(endDate, -34);
 
+      // V5.7.3: Overview needs only one n8n execution.
+      // Campaign API already contains all daily rows needed for KPI + 7-day trend,
+      // and now also returns permission-scoped Google campaign intelligence signals.
       const campaign = await UI.fetchCampaigns(
-        {game: filters.game, account: filters.account},
+        {},
         {startDate, endDate, limit: 5000}
       );
+
       allRows = campaign.rows || [];
       latestDate = campaign.data_date || latestDate;
+      intelligenceSummary = campaign.ai_intelligence_summary || {};
 
-      if (!preserveFilters) {
-        UI.fillSelectOptions(gameFilter, UI.gameOptions(allRows));
-        UI.fillSelectOptions(accountFilter, UI.accountOptions(allRows, gameFilter?.value || ''));
-        UI.fillSelect(typeFilter, ['Search','PMax','Display','Video','Demand Gen']);
-      } else {
-        UI.fillSelectOptions(accountFilter, UI.accountOptions(allRows, gameFilter?.value || ''));
-      }
+      UI.fillSelectOptions(gameFilter, UI.gameOptions(allRows));
+      UI.fillSelectOptions(accountFilter, UI.accountOptions(allRows, ''));
+      UI.fillSelect(typeFilter, ['Search','PMax','Display','Video','Demand Gen']);
 
       render();
     } catch (error) {
@@ -171,8 +194,15 @@
       localStorage.getItem('display_name') || localStorage.getItem('username') || 'User';
     document.getElementById('role').textContent = localStorage.getItem('role') || 'USER';
 
-    gameFilter?.addEventListener('change', () => loadData({preserveFilters:true}));
-    accountFilter?.addEventListener('change', () => loadData({preserveFilters:true}));
+    gameFilter?.addEventListener('change', () => {
+      if (accountFilter) accountFilter.value = '';
+      UI.fillSelectOptions(
+        accountFilter,
+        UI.accountOptions(allRows, gameFilter?.value || '')
+      );
+      render();
+    });
+    accountFilter?.addEventListener('change', render);
     typeFilter?.addEventListener('change', render);
     document.getElementById('logoutButton')?.addEventListener('click', () => window.Auth.redirectToLogin());
 

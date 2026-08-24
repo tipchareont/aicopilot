@@ -3,6 +3,92 @@
 const form = document.getElementById('loginForm');
 const button = document.getElementById('loginButton');
 const message = document.getElementById('loginMessage');
+const progress = document.getElementById('loginProgress');
+const progressTitle = document.getElementById('loginProgressTitle');
+const progressDetail = document.getElementById('loginProgressDetail');
+const elapsed = document.getElementById('loginElapsed');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+
+let loginTimer = null;
+let loginStartedAt = 0;
+
+function formatElapsed(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function loginProgressMessage(seconds) {
+  if (seconds < 10) {
+    return {
+      title: 'กำลังเชื่อมต่อระบบ',
+      detail: 'กำลังส่งข้อมูลเข้าสู่ระบบอย่างปลอดภัย...',
+    };
+  }
+
+  if (seconds < 30) {
+    return {
+      title: 'กำลังตรวจสอบบัญชี',
+      detail: 'กำลังตรวจสอบ Username, Session และสถานะผู้ใช้งาน...',
+    };
+  }
+
+  if (seconds < 75) {
+    return {
+      title: 'กำลังตรวจสอบสิทธิ์',
+      detail: 'กำลังเตรียมสิทธิ์ Game / Account และข้อมูลสำหรับ Workspace...',
+    };
+  }
+
+  if (seconds < 180) {
+    return {
+      title: 'ระบบยังทำงานอยู่',
+      detail: 'การเตรียม Session และสิทธิ์อาจใช้เวลาสักครู่ กรุณารอโดยไม่ต้องกด Login ซ้ำ...',
+    };
+  }
+
+  return {
+    title: 'ระบบกำลังประมวลผลต่อเนื่อง',
+    detail: 'ใช้เวลานานกว่าปกติ แต่คำขอยังทำงานอยู่ กรุณาอย่าปิดหรือรีเฟรชหน้านี้...',
+  };
+}
+
+function updateLoginProgress() {
+  if (!loginStartedAt) return;
+
+  const seconds = Math.max(
+    0,
+    Math.floor((Date.now() - loginStartedAt) / 1000)
+  );
+
+  const state = loginProgressMessage(seconds);
+
+  elapsed.textContent = formatElapsed(seconds);
+  progressTitle.textContent = state.title;
+  progressDetail.textContent = state.detail;
+}
+
+function startLoginProgress() {
+  loginStartedAt = Date.now();
+  progress.classList.remove('hidden');
+  usernameInput.disabled = true;
+  passwordInput.disabled = true;
+  updateLoginProgress();
+
+  clearInterval(loginTimer);
+  loginTimer = setInterval(updateLoginProgress, 1000);
+}
+
+function stopLoginProgress() {
+  clearInterval(loginTimer);
+  loginTimer = null;
+  loginStartedAt = 0;
+  progress.classList.add('hidden');
+  usernameInput.disabled = false;
+  passwordInput.disabled = false;
+  elapsed.textContent = '00:00';
+}
 
 function show(text, type = '') {
   message.textContent = text;
@@ -54,8 +140,8 @@ if (window.Auth?.token?.()) {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value;
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
   const url = window.APP_CONFIG?.LOGIN_URL;
 
   if (!username || !password) {
@@ -71,6 +157,7 @@ form.addEventListener('submit', async (event) => {
   button.disabled = true;
   button.textContent = 'กำลังเข้าสู่ระบบ...';
   show('');
+  startLoginProgress();
 
   try {
     const response = await fetch(url, {
@@ -90,7 +177,7 @@ form.addEventListener('submit', async (event) => {
     window.Auth.clearDashboardCache();
     window.Auth.save(result);
 
-    console.info('[AI Marketing Copilot v4.2.0] Login saved session', {
+    console.info('[AI Marketing Copilot v5.7.2] Login saved session', {
       hasToken: Boolean(window.Auth.token()),
       expiresAt: window.Auth.expiry?.() || '',
     });
@@ -98,6 +185,9 @@ form.addEventListener('submit', async (event) => {
     if (!window.Auth.token()) {
       throw new Error('ระบบไม่สามารถบันทึก Session ได้');
     }
+
+    progressTitle.textContent = 'เข้าสู่ระบบสำเร็จ';
+    progressDetail.textContent = 'กำลังเปิด Dashboard...';
 
     show(
       `เข้าสู่ระบบสำเร็จ: ${
@@ -109,8 +199,8 @@ form.addEventListener('submit', async (event) => {
     location.replace('dashboard/index.html');
   } catch (error) {
     console.error('Login error:', error);
+    stopLoginProgress();
     show(error?.message || 'เชื่อมต่อระบบไม่ได้', 'error');
-  } finally {
     button.disabled = false;
     button.textContent = 'เข้าสู่ระบบ';
   }

@@ -20,3 +20,16 @@
 .sidebar-platform-subnav{padding-left:12px}
 .sidebar-platform-subnav a{font-size:13px}
 .sidebar-footer{margin-top:auto;padding-top:24px;font-size:12px;opacity:.66}
+
+.login-card button:disabled{opacity:.72;cursor:wait}
+.login-card input:disabled{background:#f7f8fa;color:#667085;cursor:wait}
+.login-progress{margin-top:14px;padding:14px;border:1px solid #d9e2f0;border-radius:12px;background:#f8fafc}
+.login-progress-head{display:flex;align-items:center;gap:12px}
+.login-progress-head>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.login-progress-head strong{font-size:14px}
+.login-progress-head span:not(.login-spinner){font-size:12px;color:#667085;font-variant-numeric:tabular-nums}
+.login-progress p{margin:10px 0 0;color:#475467;font-size:13px;line-height:1.45}
+.login-progress .login-progress-note{font-size:12px;color:#667085}
+.login-spinner{width:20px;height:20px;border:2px solid #d0d5dd;border-top-color:#172033;border-radius:50%;animation:login-spin .85s linear infinite;flex:0 0 auto}
+@keyframes login-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.login-spinner{animation-duration:1.8s}}

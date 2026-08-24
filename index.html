@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | AI Marketing Copilot</title>
-  <link rel="stylesheet" href="assets/css/app.css?v=5.5.0">
+  <link rel="stylesheet" href="assets/css/app.css?v=5.7.2">
 </head>
 <body class="login-body">
   <main class="login-page">
@@ -17,12 +17,25 @@
         <label>Password</label>
         <input id="password" type="password" placeholder="กรอก Password" required>
         <button id="loginButton" type="submit">เข้าสู่ระบบ</button>
+
+        <div id="loginProgress" class="login-progress hidden" role="status" aria-live="polite">
+          <div class="login-progress-head">
+            <span class="login-spinner" aria-hidden="true"></span>
+            <div>
+              <strong id="loginProgressTitle">ระบบกำลังทำงาน</strong>
+              <span id="loginElapsed">00:00</span>
+            </div>
+          </div>
+          <p id="loginProgressDetail">กำลังเริ่มต้นการเข้าสู่ระบบ...</p>
+          <p class="login-progress-note">กรุณาอย่าปิดหรือรีเฟรชหน้านี้ระหว่างที่ระบบกำลังตรวจสอบข้อมูล</p>
+        </div>
+
         <p id="loginMessage" class="message"></p>
       </form>
     </section>
   </main>
-  <script src="assets/js/config.js?v=5.5.0"></script>
-  <script src="assets/js/auth.js?v=5.5.0"></script>
-  <script src="assets/js/login.js?v=5.5.0"></script>
+  <script src="assets/js/config.js?v=5.7.2"></script>
+  <script src="assets/js/auth.js?v=5.7.2"></script>
+  <script src="assets/js/login.js?v=5.7.2"></script>
 </body>
 </html>

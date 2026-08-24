@@ -283,7 +283,22 @@
 
   async function createAction(event){event.preventDefault();if(!state.selected)return;const btn=$('saveActionButton');btn.disabled=true;$('actionMessage').className='form-message';$('actionMessage').textContent='กำลังบันทึก Action และ Baseline...';try{const r=await request({action:'CREATE_ACTION',decision_key:state.selected.Decision_Key,game_id:state.selected.Game_ID,account_id:state.selected.Account_ID,platform:state.selected.Platform||'META',action_type:$('actionType').value,action_detail:$('actionDetail').value,action_date:$('actionDate').value,owner:$('actionOwner').value,expected_result:$('expectedResult').value,user_note:$('userNote').value});applyMutation(r.action);$('actionMessage').className='form-message success';$('actionMessage').textContent='บันทึก Action เรียบร้อย ระบบจะ Review ผลที่ 1 / 3 / 7 วัน';clearSelection();}catch(e){$('actionMessage').className='form-message error';$('actionMessage').textContent=e.message;btn.disabled=false;}}
   async function dismissDecision(key){const row=(state.data?.decisions||[]).find(d=>d.Decision_Key===key);if(!row||!confirm(`เลือกไม่ดำเนินการกับปัญหา “${row.Entity_Name}” ใช่หรือไม่?`))return;try{const r=await request({action:'DISMISS_DECISION',decision_key:key,game_id:row.Game_ID,account_id:row.Account_ID,platform:row.Platform||'META',dismiss_reason:'ทีมตรวจสอบแล้วและเลือกไม่ดำเนินการในรอบนี้'});applyMutation(r.action);}catch(e){alert(e.message)}}
-  async function updateAction(id,status){if(!confirm(`เปลี่ยนสถานะ Action เป็น “${statusLabel(status)}” ใช่หรือไม่?`))return;try{const r=await request({action:'UPDATE_ACTION',action_id:id,action_status:status});applyMutation(r.action);}catch(e){alert(e.message)}}
+  async function updateAction(id,status){
+    const row=(state.data?.actions||[]).find(a=>a.Action_ID===id);
+    if(!row){alert('ไม่พบ Action ที่ต้องการแก้ไข');return;}
+    if(!confirm(`เปลี่ยนสถานะ Action เป็น “${statusLabel(status)}” ใช่หรือไม่?`))return;
+    try{
+      const r=await request({
+        action:'UPDATE_ACTION',
+        action_id:id,
+        action_status:status,
+        game_id:row.Game_ID||'',
+        account_id:row.Account_ID||'',
+        platform:row.Platform||((String(row.Action_Source||'').toUpperCase().startsWith('GOOGLE'))?'GOOGLE':'META')
+      });
+      applyMutation(r.action);
+    }catch(e){alert(e.message)}
+  }
 
   function setTab(tab){state.tab=tab;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('decisionsView').classList.toggle('hidden',tab!=='decisions');$('actionsView').classList.toggle('hidden',tab!=='actions');$('closedActionsView').classList.toggle('hidden',tab!=='closed');$('learningView').classList.toggle('hidden',tab!=='learning');}
   async function load(refresh=false){

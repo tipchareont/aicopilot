@@ -174,6 +174,8 @@ window.GoogleAdsUI = (() => {
     if (filters.account && row.accountId !== filters.account && row.account !== filters.account) return false;
     if (filters.type && row.type !== filters.type) return false;
     if (filters.status && row.status !== filters.status) return false;
+    if (filters.startDate && row.date && row.date < filters.startDate) return false;
+    if (filters.endDate && row.date && row.date > filters.endDate) return false;
     return true;
   });
 

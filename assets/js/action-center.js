@@ -8,7 +8,7 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 6;
+  const CACHE_VERSION = 7;
   const cacheKey = () => `ai_marketing_copilot_action_center_v6_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
@@ -272,7 +272,7 @@
 
     $('patternGrid').innerHTML=patterns.length
       ?patterns.map(patternCard).join('')
-      :'<div class="empty-state">ยังไม่มี Action ที่ครบ Review 7 วัน</div>';
+      :'<div class="empty-state">ยังไม่มี Action ที่ครบ Review 7 วันใน Source of Truth</div>';
 
     bindDynamic();
   }

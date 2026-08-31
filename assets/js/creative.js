@@ -65,6 +65,33 @@ function formatDateThai(v) {
   }).format(new Date(`${v}T00:00:00`));
 }
 
+function syncRangePills() {
+  const selected = value('daysFilter') || 'all';
+
+  document
+    .querySelectorAll('[data-range]')
+    .forEach((button) => {
+      button.classList.toggle(
+        'active',
+        button.dataset.range === selected
+      );
+    });
+}
+
+function bindRangePills() {
+  document
+    .querySelectorAll('[data-range]')
+    .forEach((button) =>
+      button.addEventListener('click', () => {
+        const next = button.dataset.range || 'all';
+        $('daysFilter').value = next;
+        syncRangePills();
+        syncDateControls();
+        apply();
+      })
+    );
+}
+
 function dataCoverage() {
   if (!dateMeta.min || !dateMeta.max) return 'ไม่พบช่วงข้อมูล';
   return `ข้อมูลทั้งหมด ${formatDateThai(dateMeta.min)} – ${formatDateThai(dateMeta.max)}`;
@@ -315,6 +342,7 @@ function syncDateControls(range = activeRange) {
   const custom = value('daysFilter') === 'custom';
   const wrap = $('customDateRange');
 
+  syncRangePills();
   wrap?.classList.toggle('active', custom);
 
   const dateFrom = $('dateFrom');
@@ -1120,6 +1148,7 @@ async function load(refresh = false) {
     lastUpdated = updated;
 
     syncDateControls();
+    bindRangePills();
     apply();
 
     user();
@@ -1170,9 +1199,17 @@ $('accountFilter').addEventListener(
   }
 );
 
+$('daysFilter').addEventListener(
+  'change',
+  () => {
+    syncRangePills();
+    syncDateControls();
+    apply();
+  }
+);
+
 [
   'objectiveFilter',
-  'daysFilter',
   'reuseFilter',
 ].forEach(
   (id) =>

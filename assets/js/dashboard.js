@@ -22,24 +22,24 @@ function percent(value){ return `${num(value).toFixed(2)}%`; }
 function safeDivide(a,b){ return num(b)>0 ? num(a)/num(b) : 0; }
 function displayObjectiveValue(value){ const raw=String(value ?? '').trim(); if(!raw) return ''; const upper=raw.toUpperCase(); if(['SALE','SALES','CONVERSION'].includes(upper)) return 'Conversion'; if(upper==='AWARENESS') return 'Awareness'; if(upper==='TRAFFIC') return 'Traffic'; if(upper==='ENGAGEMENT') return 'Engagement'; if(upper==='LEADS') return 'Leads'; return raw; }
 function displayObjective(row){ return displayObjectiveValue(field(row,['Objective_Display','Objective'],'')); }
-function isConversionObjective(row){ return displayObjective(row).toUpperCase()==='CONVERSION'; }
+function isLeadObjective(row){
+  const display=displayObjective(row).toUpperCase();
+  const raw=String(field(row,['Objective','Objective_Display'],'')).trim().toUpperCase();
+  return display==='LEAD' || display==='LEADS' || raw==='OUTCOME_LEADS' || raw==='LEAD' || raw==='LEADS';
+}
 function completeRegisterMetric(row){
   const direct=field(row,['Complete_Register','Complete_Registers','Complete_Registration','Complete_Registrations','Complete Register','CompleteRegister','New_Register','New_Registers'],null);
   if(direct!==null && direct!=='') return num(direct);
   const resultType=String(field(row,['Result_Type','ResultType','result_type','Meta_Result_Type'],'')).toLowerCase().replace(/[\s_-]+/g,'');
   const completeTypes=['completeregistration','completedregistration','completeregister','completedregister','registrationcomplete','newregister'];
   if(completeTypes.includes(resultType)) return metric(row,'results');
-  return !resultType && isConversionObjective(row) ? metric(row,'results') : 0;
+  return 0;
 }
-function conversionSpendMetric(row){
-  const direct=field(row,['Conversion_Spend'],null);
-  if(direct!==null && direct!=='') return num(direct);
-  return isConversionObjective(row) ? metric(row,'spend') : 0;
+function leadSpendMetric(row){
+  return isLeadObjective(row) ? metric(row,'spend') : 0;
 }
-function conversionCompleteRegisterMetric(row){
-  const direct=field(row,['Conversion_Complete_Register'],null);
-  if(direct!==null && direct!=='') return num(direct);
-  return isConversionObjective(row) ? completeRegisterMetric(row) : 0;
+function leadCompleteRegisterMetric(row){
+  return isLeadObjective(row) ? completeRegisterMetric(row) : 0;
 }
 function parseDate(value){
   if(!value) return null;
@@ -180,12 +180,31 @@ function filtered(type){
   return state.filteredCache[type];
 }
 function aggregate(rowsToSum){
-  const totals=rowsToSum.reduce((a,r)=>{ a.spend+=metric(r,'spend'); a.impressions+=metric(r,'impressions'); a.clicks+=metric(r,'clicks'); a.lpv+=metric(r,'lpv'); a.results+=metric(r,'results'); a.reach+=metric(r,'reach'); a.completeRegister+=completeRegisterMetric(r); a.conversionSpend+=conversionSpendMetric(r); a.conversionCompleteRegister+=conversionCompleteRegisterMetric(r); return a; },{spend:0,impressions:0,clicks:0,lpv:0,results:0,reach:0,completeRegister:0,conversionSpend:0,conversionCompleteRegister:0});
-  totals.cpr=safeDivide(totals.spend,totals.results); totals.ctr=safeDivide(totals.clicks,totals.impressions)*100; totals.cplpv=safeDivide(totals.spend,totals.lpv); totals.cpcr=safeDivide(totals.spend,totals.completeRegister); totals.conversionCpcr=safeDivide(totals.conversionSpend,totals.conversionCompleteRegister); return totals;
+  const totals=rowsToSum.reduce((a,r)=>{
+    a.spend+=metric(r,'spend');
+    a.impressions+=metric(r,'impressions');
+    a.clicks+=metric(r,'clicks');
+    a.lpv+=metric(r,'lpv');
+    a.results+=metric(r,'results');
+    a.reach+=metric(r,'reach');
+    a.completeRegister+=completeRegisterMetric(r);
+    a.leadSpend+=leadSpendMetric(r);
+    a.leadCompleteRegister+=leadCompleteRegisterMetric(r);
+    return a;
+  },{spend:0,impressions:0,clicks:0,lpv:0,results:0,reach:0,completeRegister:0,leadSpend:0,leadCompleteRegister:0});
+  totals.cpr=safeDivide(totals.spend,totals.results);
+  totals.ctr=safeDivide(totals.clicks,totals.impressions)*100;
+  totals.cplpv=safeDivide(totals.spend,totals.lpv);
+  totals.cpcr=safeDivide(totals.spend,totals.completeRegister);
+  totals.leadCpcr=safeDivide(totals.leadSpend,totals.leadCompleteRegister);
+  return totals;
 }
-function aggregateConversion(rowsToSum){ const totals=aggregate(rowsToSum); return {spend:totals.conversionSpend,completeRegister:totals.conversionCompleteRegister,cpcr:totals.conversionCpcr}; }
+function aggregateLead(rowsToSum){
+  const totals=aggregate(rowsToSum);
+  return {spend:totals.leadSpend,completeRegister:totals.leadCompleteRegister,cpcr:totals.leadCpcr};
+}
 function accountMetricRows(){ const account=filtered('account'); return account.length?account:filtered('campaign'); }
-function previousRangeRows(){
+function previousRangeRows(type='account'){
   if(state.days==='all') return [];
 
   const current=state.currentRange || activeRange();
@@ -199,7 +218,7 @@ function previousRangeRows(){
   const fromTs=from.getTime();
   const toTs=to.getTime();
 
-  return state.rows.account.filter(row=>{
+  return (state.rows[type] || []).filter(row=>{
     if(row.__ts===null || row.__ts<fromTs || row.__ts>toTs) return false;
     return (
       (!state.filters.game || row.__game===state.filters.game)
@@ -210,17 +229,52 @@ function previousRangeRows(){
 }
 function setDelta(id,current,previous,lowerBetter=false){ const node=el(id); if(!node) return; if(!previous){ node.textContent='ไม่มีช่วงเทียบ'; node.className='kpi-delta neutral'; return; } const change=((current-previous)/Math.abs(previous))*100; node.textContent=`${change>=0?'+':''}${change.toFixed(1)}%`; const good=lowerBetter?change<0:change>0; node.className=`kpi-delta ${Math.abs(change)<0.1?'neutral':good?'positive':'negative'}`; }
 function renderKpis(){
-  const totals=aggregate(accountMetricRows()); const prev=aggregate(previousRangeRows()); const conversionTotals=aggregateConversion(accountMetricRows()); const prevConversion=aggregateConversion(previousRangeRows());
-  text('spendKpi',`฿${money(totals.spend)}`); text('resultsKpi',integer(totals.completeRegister)); text('cprKpi',`฿${money(totals.cpcr)}`); text('conversionResultsKpi',integer(conversionTotals.completeRegister)); text('conversionCprKpi',`฿${money(conversionTotals.cpcr)}`); text('ctrKpi',percent(totals.ctr)); text('clicksKpi',integer(totals.clicks)); text('lpvKpi',integer(totals.lpv)); text('cplpvKpi',`฿${money(totals.cplpv)}`); text('impressionsKpi',integer(totals.impressions));
-  setDelta('spendDelta',totals.spend,prev.spend,false); setDelta('resultsDelta',totals.completeRegister,prev.completeRegister,false); setDelta('cprDelta',totals.cpcr,prev.cpcr,true); setDelta('conversionResultsDelta',conversionTotals.completeRegister,prevConversion.completeRegister,false); setDelta('conversionCprDelta',conversionTotals.cpcr,prevConversion.cpcr,true); setDelta('ctrDelta',totals.ctr,prev.ctr,false);
+  const totals=aggregate(accountMetricRows());
+  const prev=aggregate(previousRangeRows('account'));
+  const leadTotals=aggregateLead(filtered('campaign'));
+  const prevLead=aggregateLead(previousRangeRows('campaign'));
+
+  text('spendKpi',`฿${money(totals.spend)}`);
+  text('resultsKpi',integer(totals.completeRegister));
+  text('cprKpi',`฿${money(totals.cpcr)}`);
+  text('leadResultsKpi',integer(leadTotals.completeRegister));
+  text('leadCprKpi',`฿${money(leadTotals.cpcr)}`);
+  text('ctrKpi',percent(totals.ctr));
+  text('clicksKpi',integer(totals.clicks));
+  text('lpvKpi',integer(totals.lpv));
+  text('cplpvKpi',`฿${money(totals.cplpv)}`);
+  text('impressionsKpi',integer(totals.impressions));
+
+  setDelta('spendDelta',totals.spend,prev.spend,false);
+  setDelta('resultsDelta',totals.completeRegister,prev.completeRegister,false);
+  setDelta('cprDelta',totals.cpcr,prev.cpcr,true);
+  setDelta('leadResultsDelta',leadTotals.completeRegister,prevLead.completeRegister,false);
+  setDelta('leadCprDelta',leadTotals.cpcr,prevLead.cpcr,true);
+  setDelta('ctrDelta',totals.ctr,prev.ctr,false);
 }
 function byDate(rowsToGroup){ const map=new Map(); for(const r of rowsToGroup){ const key=dateKey(field(r,['Date','Data_Date','date'])) || 'ไม่ระบุวันที่'; if(!map.has(key)) map.set(key,[]); map.get(key).push(r); } return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([date,list])=>({date,...aggregate(list)})); }
 function destroyChart(name){ state.charts[name]?.destroy?.(); }
 function chartAvailable(){ return typeof Chart !== 'undefined'; }
 function renderTrend(){
-  const series=byDate(accountMetricRows()); text('trendBadge',state.days==='all'?'ย้อนหลังทั้งหมด':state.days==='custom'?'กำหนดเอง':`${state.days} วัน`); if(!chartAvailable()) return;
-  const config={spend:{label:'Spend',suffix:'฿',value:x=>x.spend},results:{label:'Complete Register ทั้งหมด',suffix:'',value:x=>x.completeRegister},cpr:{label:'Blended Cost / Complete Register',suffix:'฿',value:x=>x.cpcr},conversionResults:{label:'Conversion Complete Register',suffix:'',value:x=>x.conversionCompleteRegister},conversionCpr:{label:'Conversion Cost / Complete Register',suffix:'฿',value:x=>x.conversionCpcr},ctr:{label:'CTR',suffix:'%',value:x=>x.ctr},clicks:{label:'Clicks',suffix:'',value:x=>x.clicks},lpv:{label:'LPV',suffix:'',value:x=>x.lpv},impressions:{label:'Impressions',suffix:'',value:x=>x.impressions}}[state.trendMetric] || {label:'Spend',suffix:'฿',value:x=>x.spend};
-  destroyChart('trend'); state.charts.trend=new Chart(el('trendChart'),{type:'line',data:{labels:series.map(x=>x.date),datasets:[{label:config.label,data:series.map(config.value),fill:false,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>`${config.label}: ${config.suffix}${new Intl.NumberFormat('th-TH',{maximumFractionDigits:2}).format(ctx.parsed.y)}`}}},scales:{y:{beginAtZero:true}}}});
+  const useCampaignRows=['leadResults','leadCpr'].includes(state.trendMetric);
+  const series=byDate(useCampaignRows ? filtered('campaign') : accountMetricRows());
+  text('trendBadge',state.days==='all'?'ย้อนหลังทั้งหมด':state.days==='custom'?'กำหนดเอง':`${state.days} วัน`);
+  if(!chartAvailable()) return;
+
+  const config={
+    spend:{label:'Spend',suffix:'฿',value:x=>x.spend},
+    results:{label:'Complete Register ทั้งหมด',suffix:'',value:x=>x.completeRegister},
+    cpr:{label:'Blended Cost / Complete Register',suffix:'฿',value:x=>x.cpcr},
+    leadResults:{label:'Lead Complete Register',suffix:'',value:x=>x.leadCompleteRegister},
+    leadCpr:{label:'Lead Cost / Complete Register',suffix:'฿',value:x=>x.leadCpcr},
+    ctr:{label:'CTR',suffix:'%',value:x=>x.ctr},
+    clicks:{label:'Clicks',suffix:'',value:x=>x.clicks},
+    lpv:{label:'LPV',suffix:'',value:x=>x.lpv},
+    impressions:{label:'Impressions',suffix:'',value:x=>x.impressions}
+  }[state.trendMetric] || {label:'Spend',suffix:'฿',value:x=>x.spend};
+
+  destroyChart('trend');
+  state.charts.trend=new Chart(el('trendChart'),{type:'line',data:{labels:series.map(x=>x.date),datasets:[{label:config.label,data:series.map(config.value),fill:false,tension:.28,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>`${config.label}: ${config.suffix}${new Intl.NumberFormat('th-TH',{maximumFractionDigits:2}).format(ctx.parsed.y)}`}}},scales:{y:{beginAtZero:true}}}});
 }
 function groupMetric(rowsToGroup,keyNames,metricName){ const map=new Map(); for(const r of rowsToGroup){ const key=typeof keyNames==='function'?String(keyNames(r) || 'ไม่ระบุ'):String(field(r,keyNames,'ไม่ระบุ')); map.set(key,(map.get(key)||0)+metric(r,metricName)); } return [...map.entries()].sort((a,b)=>b[1]-a[1]); }
 function donut(name,canvasId,entries){ if(!chartAvailable()) return; destroyChart(name); state.charts[name]=new Chart(el(canvasId),{type:'doughnut',data:{labels:entries.map(x=>x[0]),datasets:[{data:entries.map(x=>x[1])}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}}}}); }

@@ -4,19 +4,91 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Google Ads Overview | AI Marketing Copilot</title>
-  <meta name="description" content="รายงาน Google Ads จริงสำหรับ PMax และ Search" />
-  <link rel="stylesheet" href="../assets/css/app.css?v=5.7.8" />
+  <meta name="description" content="Google Ads monthly performance overview with historical filters and trends" />
+  <link rel="stylesheet" href="../assets/css/app.css?v=5.8.0" />
   <style>
-    :root{--bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;--primary:#2563eb;--primary-soft:#eff6ff;--success:#15803d;--success-soft:#f0fdf4;--warning:#b45309;--warning-soft:#fffbeb;--danger:#b91c1c;--danger-soft:#fef2f2;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px}
-    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text)} .main{display:flex;flex-direction:column;min-height:100vh}
-    .topbar{gap:20px}.topbar-title h1,.topbar-title p{margin:0}.topbar-title p{margin-top:4px;color:var(--muted)}.topbar-actions,.user-box{display:flex;align-items:center;gap:12px}.user-meta{display:grid;gap:2px;text-align:right}.user-meta span{color:var(--muted);font-size:12px}.button-secondary,.button-primary{border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}.button-secondary{border:1px solid var(--border);background:var(--surface);color:var(--text)}.button-primary{border:1px solid var(--primary);background:var(--primary);color:#fff}
-    .content{max-width:1440px;width:100%;padding:28px;display:grid;gap:18px}.panel,.kpi-card,.filter-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
-    .filter-panel{padding:18px 20px;display:grid;gap:14px}.filter-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.filter-top h2,.filter-top p{margin:0}.filter-top p{margin-top:4px;color:var(--muted);font-size:13px}.filters{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:700;color:#475569}.field select{padding:11px 12px;border:1px solid #cfd7e3;border-radius:10px;background:#fff}
-    .kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.kpi-card{padding:18px}.kpi-label{font-size:13px;color:var(--muted)}.kpi-card strong{display:block;margin-top:10px;font-size:30px}.kpi-sub{display:block;margin-top:8px;font-size:12px;color:var(--muted)}
-    .dashboard-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px}.panel-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--border)}.panel-header h3,.panel-header p{margin:0}.panel-header p{margin-top:4px;color:var(--muted);font-size:13px}.panel-badge{padding:7px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:12px;font-weight:700}.panel-body{padding:18px 20px}
-    .data-table{width:100%;border-collapse:collapse;font-size:13px}.data-table th,.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.data-table th{background:#f8fafc;color:#475569}.table-wrap{overflow:auto}.table-empty{text-align:center;color:var(--muted)}
-    .action-list{display:grid;gap:10px}.action-card{padding:13px;border-radius:14px;border:1px solid var(--border);background:#fafcff}.action-card[data-level="high"]{border-color:#fecaca;background:var(--danger-soft)}.action-card[data-level="medium"]{border-color:#fde68a;background:var(--warning-soft)}.action-card[data-level="good"]{border-color:#bbf7d0;background:var(--success-soft)}.action-head{display:flex;justify-content:space-between;gap:12px}.action-tag{font-size:10px;font-weight:800;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.8)}.action-card p{margin:7px 0 0;color:#475569;font-size:12px;line-height:1.65}.footer-note{padding:0 4px 20px;color:var(--muted);font-size:12px;text-align:center}
-    @media(max-width:1080px){.dashboard-grid,.filters,.kpi-grid{grid-template-columns:1fr}} 
+    :root{
+      --bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;
+      --primary:#2563eb;--primary-soft:#eff6ff;--success:#15803d;--success-soft:#f0fdf4;
+      --danger:#b91c1c;--danger-soft:#fef2f2;--shadow:0 12px 30px rgba(15,23,42,.06);--radius:18px
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text)}
+    .main{display:flex;flex-direction:column;min-height:100vh}
+    .topbar-title h1,.topbar-title p{margin:0}
+    .topbar-title p{margin-top:4px;color:var(--muted)}
+    .topbar-actions,.user-box{display:flex;align-items:center;gap:12px}
+    .user-meta{display:grid;gap:2px;text-align:right}
+    .user-meta span{color:var(--muted);font-size:12px}
+    .button-secondary,.button-primary{border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .button-secondary{border:1px solid var(--border);background:var(--surface);color:var(--text)}
+    .button-primary{border:1px solid var(--primary);background:var(--primary);color:#fff}
+    .content{max-width:1500px;width:100%;padding:28px;display:grid;gap:18px}
+    .panel,.kpi-card,.filter-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+    .filter-panel{padding:18px 20px;display:grid;gap:16px}
+    .filter-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+    .filter-top h2,.filter-top p{margin:0}
+    .filter-top p{margin-top:4px;color:var(--muted);font-size:13px}
+    .filter-actions{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+    .last-updated{font-size:12px;color:var(--primary);font-weight:700;text-align:right}
+    .filters{display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr;gap:12px;align-items:end}
+    .field{display:grid;gap:6px;min-width:0}
+    .field label{font-size:12px;font-weight:700;color:#475569}
+    .field select,.field input{width:100%;min-width:0;padding:11px 12px;border:1px solid #cfd7e3;border-radius:10px;background:#fff;color:var(--text)}
+    .date-presets{display:flex;flex-wrap:wrap;gap:7px}
+    .preset{border:1px solid var(--border);background:#fff;color:#334155;padding:8px 11px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700}
+    .preset.active{border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+    .date-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .kpi-card{padding:17px 18px;min-height:122px;display:grid;align-content:start;gap:8px}
+    .kpi-label{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#64748b;font-size:12px}
+    .kpi-card strong{font-size:28px;line-height:1.1}
+    .kpi-sub{font-size:12px;color:var(--muted)}
+    .kpi-delta{font-size:11px;font-weight:800;padding:4px 7px;border-radius:999px;white-space:nowrap}
+    .kpi-delta.good{color:var(--success);background:var(--success-soft)}
+    .kpi-delta.bad{color:var(--danger);background:var(--danger-soft)}
+    .kpi-delta.neutral{color:#64748b;background:#f1f5f9}
+    .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(330px,.8fr);gap:18px}
+    .panel-header{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+    .panel-header h3,.panel-header p{margin:0}
+    .panel-header p{margin-top:4px;font-size:12px;color:var(--muted)}
+    .panel-body{padding:18px 20px}
+    .panel-badge{padding:6px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:11px;font-weight:800;white-space:nowrap}
+    .chart-controls{display:flex;gap:10px;align-items:center}
+    .chart-controls select{padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:#fff}
+    .chart-box{height:340px;position:relative}
+    .comparison-grid{display:grid;gap:10px}
+    .compare-item{border:1px solid var(--border);border-radius:14px;padding:13px 14px;display:grid;gap:6px}
+    .compare-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#64748b}
+    .compare-item strong{font-size:20px}
+    .compare-item small{color:var(--muted)}
+    .table-wrap{overflow:auto}
+    .data-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+    .data-table th{text-align:left;background:#f8fafc;color:#475569;font-weight:800;padding:11px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+    .data-table td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+    .data-table tr:last-child td{border-bottom:0}
+    .table-empty{text-align:center;color:var(--muted);padding:22px!important}
+    .campaign-name{min-width:250px}
+    .campaign-name strong,.campaign-name small{display:block}
+    .campaign-name small{margin-top:4px;color:var(--muted)}
+    .status-pill{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}
+    .status-pill.good{background:#ecfdf5;color:#15803d}
+    .status-pill.watch{background:#fffbeb;color:#b45309}
+    .status-pill.critical{background:#fef2f2;color:#b91c1c}
+    .summary-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .summary-toolbar select{padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:#fff}
+    .footer-note{padding:0 4px 20px;color:var(--muted);font-size:12px;text-align:center}
+    @media(max-width:1180px){
+      .filters{grid-template-columns:1fr 1fr}
+      .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .dashboard-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:720px){
+      .content{padding:16px}
+      .filters,.kpi-grid,.date-inputs{grid-template-columns:1fr}
+      .filter-top{display:grid}
+      .last-updated{text-align:left}
+    }
   </style>
 </head>
 <body>
@@ -66,74 +138,150 @@
   </aside>
   <section class="main">
     <header class="topbar">
-      <div class="topbar-title"><h1>Google Ads Overview</h1><p>ข้อมูล Performance จริงจาก Google Ads API สำหรับ PMax และ Search</p></div>
-      <div class="topbar-actions"><button class="button-primary" type="button">Real Google Ads Data</button><div class="user-box"><div class="user-meta"><strong id="displayName">Administrator</strong><span id="role">ADMIN</span></div><button class="button-secondary" id="logoutButton" type="button">Logout</button></div></div>
+      <div class="topbar-title">
+        <h1>Google Ads Dashboard</h1>
+        <p>สรุป Performance ตามช่วงเวลาที่เลือก พร้อมเทียบช่วงก่อนหน้าและดูแนวโน้มรายวัน</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="button-primary" type="button">Real Google Ads Data</button>
+        <div class="user-box">
+          <div class="user-meta"><strong id="displayName">Administrator</strong><span id="role">ADMIN</span></div>
+          <button class="button-secondary" id="logoutButton" type="button">Logout</button>
+        </div>
+      </div>
     </header>
+
     <main class="content">
       <section class="filter-panel">
-        <div class="filter-top"><div><h2>Overall Performance</h2><p>มุมมองที่เหมาะกับบัญชีที่เน้น Search และ PMax เป็นหลัก</p></div><div class="panel-badge" id="updatedAt">รอข้อมูล</div></div>
+        <div class="filter-top">
+          <div>
+            <h2>Overall Performance</h2>
+            <p>เปิดหน้าแล้วแสดงภาพรวมเดือนล่าสุดทันที และเลือก Game / Account / Campaign Type / วันที่ได้</p>
+          </div>
+          <div class="filter-actions">
+            <div>
+              <button class="button-secondary" id="resetFiltersButton" type="button">รีเซ็ตตัวกรอง</button>
+              <div class="last-updated" id="updatedAt">รอข้อมูลล่าสุด</div>
+            </div>
+          </div>
+        </div>
+
         <div class="filters">
+          <div class="field">
+            <label>ช่วงเวลา</label>
+            <div class="date-presets">
+              <button class="preset active" data-range="MTD" type="button">เดือนนี้</button>
+              <button class="preset" data-range="7" type="button">7 วัน</button>
+              <button class="preset" data-range="14" type="button">14 วัน</button>
+              <button class="preset" data-range="30" type="button">30 วัน</button>
+              <button class="preset" data-range="90" type="button">90 วัน</button>
+              <button class="preset" data-range="ALL" type="button">ย้อนหลังทั้งหมด</button>
+            </div>
+            <div class="date-inputs">
+              <input id="dateFrom" type="date" aria-label="วันที่เริ่มต้น" />
+              <input id="dateTo" type="date" aria-label="วันที่สิ้นสุด" />
+            </div>
+          </div>
+
           <div class="field"><label for="gameFilter">Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
           <div class="field"><label for="accountFilter">Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
           <div class="field"><label for="typeFilter">Campaign Type</label><select id="typeFilter"><option value="">ทั้งหมด</option></select></div>
         </div>
       </section>
 
-      <section class="kpi-grid">
-        <article class="kpi-card"><span class="kpi-label">Spend</span><strong id="spendKpi">-</strong><span class="kpi-sub">ค่าใช้จ่ายรวมของชุดข้อมูลที่เลือก</span></article>
-        <article class="kpi-card"><span class="kpi-label">Conversions</span><strong id="convKpi">-</strong><span class="kpi-sub">เหมาะใช้เป็น KPI หลักของ Google Ads</span></article>
-        <article class="kpi-card"><span class="kpi-label">CPA</span><strong id="cpaKpi">-</strong><span class="kpi-sub">Cost per Conversion ภาพรวม</span></article>
-        <article class="kpi-card"><span class="kpi-label">Clicks</span><strong id="clickKpi">-</strong><span class="kpi-sub">Volume ที่เกิดขึ้นทั้งหมด</span></article>
-        <article class="kpi-card"><span class="kpi-label">CTR</span><strong id="ctrKpi">-</strong><span class="kpi-sub">เหมาะกับมุม Search และคุณภาพข้อความโฆษณา</span></article>
-        <article class="kpi-card"><span class="kpi-label">Avg CPC</span><strong id="avgCpcKpi">-</strong><span class="kpi-sub">ใช้จับต้นทุนต่อคลิกที่เริ่มแพงเกินไป</span></article>
-        <article class="kpi-card"><span class="kpi-label">PMax Campaigns</span><strong id="pmaxCount">-</strong><span class="kpi-sub">จำนวนแคมเปญ PMax ในชุดข้อมูล</span></article>
-        <article class="kpi-card"><span class="kpi-label">Search Campaigns</span><strong id="searchCount">-</strong><span class="kpi-sub">จำนวนแคมเปญ Search ในชุดข้อมูล</span></article>
-        <article class="kpi-card"><span class="kpi-label">ROAS</span><strong id="roasKpi">-</strong><span class="kpi-sub">เตรียมเผื่ออนาคต ถ้ามี Conversion Value</span></article>
+      <section class="kpi-grid" aria-label="Google Ads KPIs">
+        <article class="kpi-card"><div class="kpi-label"><span>Spend</span><span class="kpi-delta neutral" id="spendDelta">-</span></div><strong id="spendKpi">-</strong><span class="kpi-sub">ยอดใช้จ่ายรวมในช่วงที่เลือก</span></article>
+        <article class="kpi-card"><div class="kpi-label"><span>Google Ads Conversions</span><span class="kpi-delta neutral" id="convDelta">-</span></div><strong id="convKpi">-</strong><span class="kpi-sub">Conversion ตาม Google Ads เท่านั้น</span></article>
+        <article class="kpi-card"><div class="kpi-label"><span>CPA</span><span class="kpi-delta neutral" id="cpaDelta">-</span></div><strong id="cpaKpi">-</strong><span class="kpi-sub">Spend ÷ Google Ads Conversions</span></article>
+
+        <article class="kpi-card"><div class="kpi-label"><span>CTR</span><span class="kpi-delta neutral" id="ctrDelta">-</span></div><strong id="ctrKpi">-</strong><span class="kpi-sub">Clicks ÷ Impressions</span></article>
+        <article class="kpi-card"><div class="kpi-label"><span>Avg CPC</span><span class="kpi-delta neutral" id="avgCpcDelta">-</span></div><strong id="avgCpcKpi">-</strong><span class="kpi-sub">Spend ÷ Clicks</span></article>
+        <article class="kpi-card"><div class="kpi-label"><span>Conversion Rate</span><span class="kpi-delta neutral" id="convRateDelta">-</span></div><strong id="convRateKpi">-</strong><span class="kpi-sub">Google Ads Conversions ÷ Clicks</span></article>
+
+        <article class="kpi-card"><div class="kpi-label"><span>Clicks</span><span class="kpi-delta neutral" id="clickDelta">-</span></div><strong id="clickKpi">-</strong><span class="kpi-sub">จำนวนคลิกรวม</span></article>
+        <article class="kpi-card"><div class="kpi-label"><span>Impressions</span><span class="kpi-delta neutral" id="impressionDelta">-</span></div><strong id="impressionKpi">-</strong><span class="kpi-sub">จำนวนการแสดงผลรวม</span></article>
+        <article class="kpi-card"><div class="kpi-label"><span>Campaigns</span><span class="kpi-delta neutral" id="campaignDelta">-</span></div><strong id="campaignKpi">-</strong><span class="kpi-sub">Campaign ที่มีข้อมูลในช่วงนี้</span></article>
       </section>
 
       <section class="dashboard-grid">
         <article class="panel">
-          <div class="panel-header"><div><h3>Channel Mix</h3><p>ดูภาพรวมแยก Search vs PMax เพื่อคุยกับทีมได้ง่าย</p></div><span class="panel-badge">Backend-friendly block</span></div>
-          <div class="panel-body table-wrap">
-            <table class="data-table"><thead><tr><th>Channel</th><th>Spend</th><th>Conversions</th><th>CPA</th><th>CTR</th></tr></thead><tbody id="channelMixBody"></tbody></table>
+          <div class="panel-header">
+            <div><h3>Performance Trend</h3><p>ดูแนวโน้มรายวันตามช่วงเวลาที่เลือก ไม่ได้จำกัดแค่ 7 วัน</p></div>
+            <div class="chart-controls">
+              <select id="trendMetric">
+                <option value="spend">Spend</option>
+                <option value="conversions">Google Ads Conversions</option>
+                <option value="cpa">CPA</option>
+                <option value="ctr">CTR</option>
+                <option value="avgCpc">Avg CPC</option>
+                <option value="convRate">Conversion Rate</option>
+                <option value="clicks">Clicks</option>
+                <option value="impressions">Impressions</option>
+              </select>
+              <span class="panel-badge" id="trendBadge">รอข้อมูล</span>
+            </div>
           </div>
+          <div class="panel-body"><div class="chart-box"><canvas id="trendChart"></canvas></div></div>
         </article>
+
         <aside class="panel">
-          <div class="panel-header"><div><h3>What to Watch</h3><p>สรุปสิ่งที่ผู้ใช้ควรเห็นเร็วที่สุด</p></div></div>
-          <div class="panel-body"><div class="action-list" id="alertList"></div></div>
+          <div class="panel-header">
+            <div><h3>เทียบช่วงก่อนหน้า</h3><p id="comparisonLabel">รอข้อมูล</p></div>
+          </div>
+          <div class="panel-body"><div class="comparison-grid" id="comparisonGrid"></div></div>
         </aside>
       </section>
 
-      <section class="dashboard-grid">
-        <article class="panel">
-          <div class="panel-header"><div><h3>7-Day Trend Snapshot</h3><p>Mockup แบบอ่านเร็ว ไม่ต้องจมกับกราฟตั้งแต่รอบแรก</p></div></div>
-          <div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Spend</th><th>Conversions</th><th>CPA</th></tr></thead><tbody id="trendBody"></tbody></table></div>
-        </article>
-        <article class="panel">
-          <div class="panel-header"><div><h3>Why this report works for Google Ads</h3><p>แนวคิด report ที่เหมาะกับ PMax + Search</p></div></div>
-          <div class="panel-body">
-            <div class="action-list">
-              <article class="action-card" data-level="good"><div class="action-head"><strong>1. Overall Efficiency</strong></div><p>โฟกัส Spend, Conversions, CPA, CTR, Avg CPC และ ROAS ก่อน เพราะเป็น metric ที่ทีมใช้งานจริงทุกวัน</p></article>
-              <article class="action-card" data-level="medium"><div class="action-head"><strong>2. Channel Split</strong></div><p>แยก Search กับ PMax ชัดเจน เพราะ logic วิเคราะห์ไม่เหมือนกัน และช่วยให้ feedback กับทีมซื้อสื่อเร็วขึ้น</p></article>
-              <article class="action-card" data-level="high"><div class="action-head"><strong>3. Search / Asset Insight</strong></div><p>Search ต้องดู Search Terms + Impression Share ส่วน PMax ต้องดู Asset Group และ Creative Strength</p></article>
-            </div>
-          </div>
-        </article>
-      </section>
+      <article class="panel">
+        <div class="panel-header">
+          <div><h3>Performance by Campaign Type</h3><p>แยก PMax / Search ตามช่วงวันที่เดียวกับ KPI ด้านบน</p></div>
+          <span class="panel-badge">Selected period</span>
+        </div>
+        <div class="panel-body table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Type</th><th>Spend</th><th>Conversions</th><th>CPA</th><th>CTR</th><th>Campaigns</th></tr></thead>
+            <tbody id="channelMixBody"></tbody>
+          </table>
+        </div>
+      </article>
 
       <article class="panel">
-        <div class="panel-header"><div><h3>Campaign Snapshot</h3><p>ตารางหลักที่ควรให้ Manager เปิดแล้วอ่านได้ทันที</p></div><span class="panel-badge">Top campaigns</span></div>
-        <div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Campaign</th><th>Game</th><th>Account</th><th>Type</th><th>Spend</th><th>Conversions</th><th>CPA</th><th>Insight</th></tr></thead><tbody id="campaignBody"></tbody></table></div>
+        <div class="panel-header">
+          <div><h3>Campaign Summary</h3><p>สรุป Campaign จากข้อมูลจริงทั้งช่วง ไม่ใช่เฉพาะวันล่าสุด</p></div>
+          <div class="summary-toolbar">
+            <select id="campaignSort">
+              <option value="spend_desc">Spend มาก → น้อย</option>
+              <option value="conversions_desc">Conversions มาก → น้อย</option>
+              <option value="cpa_asc">CPA ต่ำ → สูง</option>
+              <option value="ctr_desc">CTR สูง → ต่ำ</option>
+              <option value="name_asc">ชื่อ A → Z</option>
+            </select>
+            <span class="panel-badge" id="campaignBadge">0 campaigns</span>
+          </div>
+        </div>
+        <div class="panel-body table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Campaign</th><th>Type</th><th>Status</th><th>Spend</th><th>Conversions</th>
+                <th>CPA</th><th>CTR</th><th>Conv. Rate</th><th>Data Range</th>
+              </tr>
+            </thead>
+            <tbody id="campaignBody"><tr><td colspan="9" class="table-empty">รอโหลดข้อมูล</td></tr></tbody>
+          </table>
+        </div>
       </article>
-      <footer class="footer-note">AI Marketing Copilot · Google Ads Real Data · Overview</footer>
+
+      <footer class="footer-note">AI Marketing Copilot · Google Ads Dashboard v5.8.0 · Monthly Performance First</footer>
     </main>
   </section>
 </div>
-<script src="../assets/js/config.js?v=5.7.8"></script>
-<script src="../assets/js/auth.js?v=5.7.8"></script>
-<script src="../assets/js/sidebar.js?v=5.7.8"></script>
 
-<script src="../assets/js/google-common.js?v=5.7.8"></script>
-<script src="../assets/js/google-overview.js?v=5.7.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="../assets/js/config.js?v=5.8.0"></script>
+<script src="../assets/js/auth.js?v=5.8.0"></script>
+<script src="../assets/js/sidebar.js?v=5.8.0"></script>
+<script src="../assets/js/google-common.js?v=5.8.0"></script>
+<script src="../assets/js/google-overview.js?v=5.8.0"></script>
 </body>
 </html>

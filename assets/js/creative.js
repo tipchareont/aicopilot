@@ -296,6 +296,29 @@ function nonDateScopeRows() {
   });
 }
 
+function dateAnchorRows() {
+  const game = value('gameFilter');
+  const account = value('accountFilter');
+
+  return sourceRows.filter((row) => {
+    if (
+      game &&
+      String(D.field(row, ['Game_Name', 'Game_ID'], '')) !== game
+    ) {
+      return false;
+    }
+
+    if (
+      account &&
+      String(D.field(row, ['Account_Name', 'Ad_Account_Name'], '')) !== account
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
 function selectedRange(scopeRows) {
   const mode = value('daysFilter') || 'all';
   const scopedMeta = dateMetaFromRows(scopeRows);
@@ -359,7 +382,7 @@ function syncDateControls(range = activeRange) {
   }
 
   if (custom) {
-    const scopedRows = nonDateScopeRows();
+    const scopedRows = dateAnchorRows();
     const scopedMeta = dateMetaFromRows(scopedRows);
 
     if (dateFrom && !dateFrom.value) {
@@ -374,16 +397,12 @@ function syncDateControls(range = activeRange) {
   const hint = $('dateRangeHint');
 
   if (hint) {
-    if (custom) {
-      hint.textContent =
-        range.from && range.to
-          ? `กำลังดู ${formatDateThai(range.from)} – ${formatDateThai(range.to)}`
-          : 'เลือกวันที่เริ่มต้นและวันที่สิ้นสุด';
-    } else if (range.from && range.to) {
-      hint.textContent =
-        `กำลังดู ${formatDateThai(range.from)} – ${formatDateThai(range.to)}`;
+    if (range.from && range.to) {
+      hint.textContent = `${formatDateThai(range.from)} – ${formatDateThai(range.to)}`;
+    } else if (custom) {
+      hint.textContent = 'เลือกวันที่เริ่มต้น – วันที่สิ้นสุด';
     } else {
-      hint.textContent = 'ยังไม่มีช่วงวันที่ที่ใช้งานได้';
+      hint.textContent = 'ไม่มีข้อมูลในช่วงที่เลือก';
     }
   }
 }
@@ -432,7 +451,7 @@ function applyNow() {
   const reuse = value('reuseFilter');
 
   const scopedRows = nonDateScopeRows();
-  activeRange = selectedRange(scopedRows);
+  activeRange = selectedRange(dateAnchorRows());
 
   syncDateControls(activeRange);
 
@@ -805,7 +824,7 @@ function renderChart() {
 
   setText(
     'rankingScope',
-    `${currentFilterSummary()} · ${D.integer(view.length)} Creative`
+    `Filter: ${currentFilterSummary()} · ${D.integer(view.length)} Creative`
   );
 }
 
@@ -876,7 +895,7 @@ function renderCoverage() {
 
   setText(
     'updatedAt',
-    `${dataCoverage()} · กำลังดู ${currentFilterSummary()}${updated}`
+    `${dataCoverage()}${updated}`
   );
 }
 

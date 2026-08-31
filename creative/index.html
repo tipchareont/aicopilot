@@ -1,17 +1,29 @@
 <!DOCTYPE html>
-<html lang="th"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Creative Intelligence | AI Marketing Copilot</title><link href="../assets/css/app.css?v=5.8.3" rel="stylesheet"/><link href="../assets/css/product.css?v=5.8.3" rel="stylesheet"/><style>
+<html lang="th"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Creative Intelligence | AI Marketing Copilot</title><link href="../assets/css/app.css?v=5.8.4" rel="stylesheet"/><link href="../assets/css/product.css?v=5.8.4" rel="stylesheet"/><style>
 .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-.field-span-2{grid-column:span 2}
-.range-pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:2px}
-.range-pill{appearance:none;border:1px solid #cfd8e3;background:#fff;color:#1f2937;border-radius:999px;padding:10px 14px;font-size:13px;font-weight:700;line-height:1;cursor:pointer;transition:all .16s ease}
+.creative-filter-panel .panel-header{align-items:center}
+.creative-filter-panel .panel-badge{max-width:58%;white-space:normal;text-align:right;line-height:1.35}
+.primary-filters{grid-template-columns:minmax(220px,1.25fr) repeat(4,minmax(150px,1fr));align-items:end}
+.primary-filters .field{min-width:0}
+.primary-filters .field input,.primary-filters .field select{min-width:0}
+.date-filter-section{margin-top:18px;padding-top:16px;border-top:1px solid #e2e8f0}
+.date-filter-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.date-filter-head>div{display:grid;gap:2px}
+.date-filter-title{font-size:13px;color:#334155}
+.date-filter-head small{font-size:11px;color:#64748b}
+.selected-range-badge{display:inline-flex;align-items:center;min-height:30px;padding:7px 11px;border-radius:999px;background:#eff6ff;color:#2563eb;font-size:12px;font-weight:800;line-height:1.2;white-space:nowrap}
+.range-pills{display:flex;flex-wrap:wrap;gap:9px}
+.range-pill{appearance:none;border:1px solid #cfd8e3;background:#fff;color:#1f2937;border-radius:999px;padding:9px 14px;font-size:13px;font-weight:700;line-height:1;cursor:pointer;transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease}
 .range-pill:hover{border-color:#7aa2ff;background:#f8fbff}
-.range-pill.active{background:#eef4ff;border-color:#4a7cff;color:#2456d3;box-shadow:inset 0 0 0 1px rgba(74,124,255,.08)}
-.custom-date-range{display:none;grid-template-columns:1fr 1fr;gap:12px;grid-column:1/-1;padding:14px 16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fbff}
+.range-pill.active{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.18)}
+.custom-date-range{display:none;grid-template-columns:minmax(220px,280px) minmax(220px,280px);gap:12px;margin-top:14px;padding:14px;border:1px solid #dbe5f1;border-radius:14px;background:#f8fbff}
 .custom-date-range.active{display:grid}
-.range-summary,.ranking-scope{display:block;margin-top:8px;color:#334155;font-size:12px;line-height:1.45;font-weight:600}
-#customDateRange .field input{width:100%;min-width:0}
-@media(max-width:980px){.field-span-2{grid-column:1/-1}}
-@media(max-width:760px){.custom-date-range.active{grid-template-columns:1fr}.range-pills{gap:8px}.range-pill{padding:9px 12px;font-size:12px}}
+.custom-date-range .field{min-width:0}
+.custom-date-range .field input{width:100%;min-width:0;background:#fff}
+.filter-actions-right{justify-content:flex-end;margin-top:14px}
+.ranking-scope{display:block;margin-top:6px;color:#64748b;font-size:11px;line-height:1.4}
+@media(max-width:1180px){.primary-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.creative-filter-panel .panel-badge{max-width:46%}}
+@media(max-width:760px){.primary-filters{grid-template-columns:1fr}.date-filter-head{align-items:flex-start;flex-direction:column}.selected-range-badge{white-space:normal}.custom-date-range.active{grid-template-columns:1fr}.filter-actions-right{justify-content:flex-start}.creative-filter-panel .panel-badge{max-width:none;text-align:left}}
 </style></head><body>
 <section class="loading" id="loading"><div class="loading-spinner"></div><h2>กำลังโหลด Creative Intelligence</h2><p id="loadingMessage">กำลังอ่านข้อมูลจริงจาก Dashboard API...</p></section>
 <div class="shell hidden" id="shell"><aside class="sidebar"><div class="sidebar-brand"><h2>AI Marketing Copilot</h2><p>Marketing Intelligence Platform</p></div><nav class="sidebar-nav">
@@ -56,9 +68,50 @@
 <div class="sidebar-footer">Multi-Channel Ads · Meta / Google Ready</div></aside>
 <section class="main"><header class="topbar"><div class="topbar-title"><h1>Creative Intelligence</h1><p>ดูผลงาน อายุ และการใช้ซ้ำของ Creative จากข้อมูลจริง</p></div><div class="topbar-actions"><button class="button-primary" id="refreshButton">รีเฟรชข้อมูล</button><div class="user-box"><div class="user-meta"><strong id="displayName">-</strong><span id="role">-</span></div><button class="button-secondary" id="logoutButton">Logout</button></div></div></header>
 <main class="content">
-<section class="panel"><div class="panel-header"><div><h2>Creative Filter</h2><p>ค้นหาและจำกัดข้อมูลก่อนวิเคราะห์</p></div><span class="panel-badge" id="updatedAt">-</span></div><div class="panel-body"><div class="filters"><div class="field"><label>ค้นหา Creative</label><input id="searchFilter" placeholder="ชื่อ Ad / Creative / Group / Campaign..."/></div><div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div><div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div><div class="field"><label>Objective</label><select id="objectiveFilter"><option value="">ทั้งหมด</option></select></div><div class="field field-span-2"><label>ช่วงข้อมูล</label><select id="daysFilter" class="visually-hidden"><option value="3">3 วัน</option><option value="7">7 วัน</option><option value="14">14 วัน</option><option value="30">30 วัน</option><option value="all">ย้อนหลังทั้งหมด</option><option value="custom">กำหนดวันที่เอง</option></select><div class="range-pills" id="rangePills"><button class="range-pill" data-range="3" type="button">3 วัน</button><button class="range-pill" data-range="7" type="button">7 วัน</button><button class="range-pill" data-range="14" type="button">14 วัน</button><button class="range-pill" data-range="30" type="button">30 วัน</button><button class="range-pill" data-range="all" type="button">ย้อนหลังทั้งหมด</button><button class="range-pill" data-range="custom" type="button">กำหนดวันที่เอง</button></div><div class="range-summary" id="dateRangeHint">-</div></div><div class="custom-date-range" id="customDateRange"><div class="field"><label for="dateFrom">วันที่เริ่มต้น</label><input id="dateFrom" type="date"/></div><div class="field"><label for="dateTo">วันที่สิ้นสุด</label><input id="dateTo" type="date"/></div></div><div class="field"><label>การใช้ซ้ำ</label><select id="reuseFilter"><option value="">ทั้งหมด</option><option value="reused">ใช้มากกว่า 1 Campaign</option><option value="single">ใช้ใน 1 Campaign</option></select></div></div><div class="filter-actions" style="margin-top:12px"><button class="button-secondary" id="resetButton">รีเซ็ตตัวกรอง</button></div></div></section>
+<section class="panel creative-filter-panel">
+<div class="panel-header"><div><h2>Creative Filter</h2><p>ค้นหาและจำกัดข้อมูลก่อนวิเคราะห์</p></div><span class="panel-badge" id="updatedAt">-</span></div>
+<div class="panel-body">
+  <div class="filters primary-filters">
+    <div class="field"><label>ค้นหา Creative</label><input id="searchFilter" placeholder="ชื่อ Ad / Creative / Group / Campaign..."/></div>
+    <div class="field"><label>Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
+    <div class="field"><label>Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+    <div class="field"><label>Objective</label><select id="objectiveFilter"><option value="">ทั้งหมด</option></select></div>
+    <div class="field"><label>การใช้ซ้ำ</label><select id="reuseFilter"><option value="">ทั้งหมด</option><option value="reused">ใช้มากกว่า 1 Campaign</option><option value="single">ใช้ใน 1 Campaign</option></select></div>
+  </div>
+
+  <section class="date-filter-section" aria-label="ช่วงข้อมูล">
+    <div class="date-filter-head">
+      <div>
+        <strong class="date-filter-title">ช่วงข้อมูล</strong>
+        <small>เลือกช่วงเร็ว หรือกำหนดวันที่เอง</small>
+      </div>
+      <span class="selected-range-badge" id="dateRangeHint">-</span>
+    </div>
+
+    <select id="daysFilter" class="visually-hidden" aria-hidden="true" tabindex="-1">
+      <option value="3">3 วัน</option><option value="7">7 วัน</option><option value="14">14 วัน</option><option value="30">30 วัน</option><option value="all">ย้อนหลังทั้งหมด</option><option value="custom">กำหนดวันที่เอง</option>
+    </select>
+
+    <div class="range-pills" id="rangePills">
+      <button class="range-pill" data-range="3" type="button">3 วัน</button>
+      <button class="range-pill" data-range="7" type="button">7 วัน</button>
+      <button class="range-pill" data-range="14" type="button">14 วัน</button>
+      <button class="range-pill" data-range="30" type="button">30 วัน</button>
+      <button class="range-pill" data-range="all" type="button">ย้อนหลังทั้งหมด</button>
+      <button class="range-pill" data-range="custom" type="button">กำหนดวันที่เอง</button>
+    </div>
+
+    <div class="custom-date-range" id="customDateRange">
+      <div class="field"><label for="dateFrom">วันที่เริ่มต้น</label><input id="dateFrom" type="date"/></div>
+      <div class="field"><label for="dateTo">วันที่สิ้นสุด</label><input id="dateTo" type="date"/></div>
+    </div>
+  </section>
+
+  <div class="filter-actions filter-actions-right"><button class="button-secondary" id="resetButton">รีเซ็ตตัวกรอง</button></div>
+</div>
+</section>
 <section class="metrics creative-metrics"><article class="metric-card"><span>Creative</span><strong id="creativeCount">0</strong><small id="creativeNote">-</small></article><article class="metric-card"><span>Reuse Creative</span><strong id="reuseCount">0</strong><small id="reuseNote">-</small></article><article class="metric-card"><span>Creative Age เฉลี่ย</span><strong id="avgAge">0 วัน</strong><small>จากวันที่มีข้อมูลครั้งแรก</small></article><article class="metric-card"><span>Spend</span><strong id="spendTotal">฿0.00</strong><small id="spendNote">-</small></article><article class="metric-card"><span>Results</span><strong id="resultsTotal">0</strong><small id="resultNote">-</small></article></section>
 <section class="chart-layout"><article class="panel"><div class="panel-header"><div><h3>Creative Ranking</h3><p>Top Creative ตาม Metric และ Filter เดียวกับ KPI / Table</p><small class="ranking-scope" id="rankingScope">-</small></div><select class="button-secondary" id="rankingMetric"><option value="spend">Spend</option><option value="results">Results</option><option value="cpr">Cost / Result</option><option value="ctr">CTR</option><option value="ageDays">Creative Age</option></select></div><div class="panel-body"><div class="chart-box"><canvas id="creativeChart"></canvas></div></div></article><article class="panel"><div class="panel-header"><div><h3>Creative Data Readiness</h3><p>ข้อมูลที่ Backend ส่งมาให้ Frontend ใช้งาน</p></div></div><div class="panel-body"><div class="legend-list" id="dataReadiness"></div></div></article></section>
-<article class="panel"><div class="panel-header"><div><h3>Creative Table</h3><p>คลิกชื่อ Creative เพื่อดู Trend และ Campaign ที่เกี่ยวข้อง</p></div><span class="panel-badge" id="tableBadge">0 creatives</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Thumbnail</th><th class="sortable" data-sort="name">Ad / Creative</th><th>Creative Group</th><th class="sortable" data-sort="ageDays">Age</th><th class="sortable" data-sort="spend">Spend</th><th class="sortable" data-sort="results">Results</th><th class="sortable" data-sort="cpr">Cost / Result</th><th class="sortable" data-sort="ctr">CTR</th><th>Frequency</th></tr></thead><tbody id="tableBody"><tr><td class="empty" colspan="9">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="pageInfo">-</span><div class="pager"><button id="prevButton">ก่อนหน้า</button><button id="nextButton">ถัดไป</button></div></div></article><footer class="footer-note">AI Marketing Copilot · Creative Intelligence V5.8.3</footer></main></section></div>
+<article class="panel"><div class="panel-header"><div><h3>Creative Table</h3><p>คลิกชื่อ Creative เพื่อดู Trend และ Campaign ที่เกี่ยวข้อง</p></div><span class="panel-badge" id="tableBadge">0 creatives</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Thumbnail</th><th class="sortable" data-sort="name">Ad / Creative</th><th>Creative Group</th><th class="sortable" data-sort="ageDays">Age</th><th class="sortable" data-sort="spend">Spend</th><th class="sortable" data-sort="results">Results</th><th class="sortable" data-sort="cpr">Cost / Result</th><th class="sortable" data-sort="ctr">CTR</th><th>Frequency</th></tr></thead><tbody id="tableBody"><tr><td class="empty" colspan="9">รอโหลดข้อมูล</td></tr></tbody></table></div><div class="table-footer"><span id="pageInfo">-</span><div class="pager"><button id="prevButton">ก่อนหน้า</button><button id="nextButton">ถัดไป</button></div></div></article><footer class="footer-note">AI Marketing Copilot · Creative Intelligence V5.8.4</footer></main></section></div>
 <div class="drawer" id="drawer"><div class="drawer-backdrop" data-close=""></div><aside class="drawer-panel creative-drawer"><div class="drawer-head"><div><h3 id="drawerTitle">Creative Detail</h3><p id="drawerSubtitle">-</p></div><button class="drawer-close" data-close="">ปิด</button></div><div class="creative-detail-hero"><div id="drawerPreview"></div><div class="detail-grid compact" id="drawerKpis"></div></div><section class="detail-section"><div class="detail-section-head"><div><h4>Daily Trend</h4><p>เลือก Metric เพื่อดูการเปลี่ยนแปลงตามวันที่</p></div><select class="button-secondary" id="detailMetric"><option value="spend">Spend</option><option value="results">Results</option><option value="cpr">Cost / Result</option><option value="ctr">CTR</option><option value="frequency">Frequency</option></select></div><div class="chart-box detail-chart"><canvas id="detailChart"></canvas></div></section><section class="detail-section"><div class="detail-section-head"><div><h4>Campaign Usage</h4><p>Campaign ที่ใช้ Creative นี้ในชุดข้อมูลปัจจุบัน</p></div><span class="panel-badge" id="campaignUsageBadge">0 Campaign</span></div><div class="usage-list" id="campaignUsage"></div></section><section class="detail-section ai-slot"><h4>AI Creative Analysis</h4><p>รอ AI Backend วิเคราะห์จาก Performance, Trend, Creative Age และ Reuse Context โดยไม่สร้างคำแนะนำจำลอง</p></section></aside></div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script src="../assets/js/config.js?v=5.8.3"></script><script src="../assets/js/auth.js?v=5.8.3"></script><script src="../assets/js/product-data.js?v=5.8.3"></script><script src="../assets/js/creative.js?v=5.8.3"></script><script src="../assets/js/sidebar.js?v=5.8.3"></script></body></html>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><script src="../assets/js/config.js?v=5.8.4"></script><script src="../assets/js/auth.js?v=5.8.4"></script><script src="../assets/js/product-data.js?v=5.8.4"></script><script src="../assets/js/creative.js?v=5.8.4"></script><script src="../assets/js/sidebar.js?v=5.8.4"></script></body></html>

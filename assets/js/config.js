@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  APP_VERSION: '5.8.7',
+  APP_VERSION: '5.8.8',
   LOGIN_URL:
     'https://n8n-external.exservice.io/webhook/ai-marketing-copilot/login',
 

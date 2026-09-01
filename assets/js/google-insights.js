@@ -2,10 +2,13 @@
 
 (() => {
   const UI = window.GoogleAdsUI;
-  const gameFilter = document.getElementById('gameFilter');
   const accountFilter = document.getElementById('accountFilter');
+  const derivedGameName = document.getElementById('derivedGameName');
+  const derivedGameId = document.getElementById('derivedGameId');
+  const accountScopeNote = document.getElementById('accountScopeNote');
 
-  let scopeRows = [];
+  let accountScopes = [];
+  let accountScopeById = new Map();
   let fullResult = null;
 
   const clean = UI.clean;
@@ -21,48 +24,107 @@
       .replaceAll("'", '&#039;');
 
   const current = () => ({
-    game: gameFilter?.value || '',
     account: accountFilter?.value || '',
   });
 
   const emptyRow = (cols, message) =>
     `<tr><td colspan="${cols}" class="empty-state">${escapeHtml(message)}</td></tr>`;
 
-  const buildScopeRows = (result) => {
-    const rows = [];
-    const push = (row) => {
-      const gameId = clean(row?.Game_ID);
+  const buildAccountScopes = (result) => {
+    const map = new Map();
+
+    const push = (row, priority = 5) => {
       const accountId = clean(row?.Account_ID);
-      if (!gameId || !accountId) return;
-      rows.push({
-        gameId,
-        game: clean(row?.Game_Name) || gameId,
-        accountId,
-        account: clean(row?.Account_Name) || accountId,
-      });
+      if (!accountId) return;
+
+      const account = clean(row?.Account_Name) || accountId;
+      const gameId = clean(row?.Game_ID);
+      const game = clean(row?.Game_Name) || gameId || '-';
+
+      const previous = map.get(accountId);
+
+      // Raw Google Insight rows are the canonical mapping source.
+      // AI scopes are only fallback and must never override a grounded raw mapping.
+      if (
+        !previous ||
+        priority < previous.priority ||
+        (!previous.gameId && gameId)
+      ) {
+        map.set(accountId, {
+          accountId,
+          account,
+          gameId,
+          game,
+          priority,
+        });
+      }
     };
 
-    [
-      ...(Array.isArray(result?.asset_groups) ? result.asset_groups : []),
-      ...(Array.isArray(result?.search_campaigns) ? result.search_campaigns : []),
-      ...(Array.isArray(result?.keywords) ? result.keywords : []),
-      ...(Array.isArray(result?.search_terms) ? result.search_terms : []),
-      ...(Array.isArray(result?.pmax_campaigns) ? result.pmax_campaigns : []),
-      ...(Array.isArray(result?.ai_intelligence?.scopes)
-        ? result.ai_intelligence.scopes
-        : []),
-    ].forEach(push);
+    const groundedSources = [
+      result?.asset_groups,
+      result?.search_campaigns,
+      result?.keywords,
+      result?.search_terms,
+      result?.pmax_campaigns,
+    ];
 
-    const deduped = new Map();
-    rows.forEach((row) => deduped.set(`${row.gameId}||${row.accountId}`, row));
-    return [...deduped.values()];
+    groundedSources.forEach((rows) => {
+      (Array.isArray(rows) ? rows : []).forEach((row) => push(row, 1));
+    });
+
+    // Fallback only when an account has no raw insight row in the response.
+    (Array.isArray(result?.ai_intelligence?.scopes)
+      ? result.ai_intelligence.scopes
+      : []
+    ).forEach((row) => push(row, 9));
+
+    return [...map.values()]
+      .sort((a, b) => a.account.localeCompare(b.account, 'th'));
   };
+
+  const updateDerivedScope = () => {
+    const accountId = accountFilter?.value || '';
+    const scope = accountScopeById.get(accountId);
+
+    if (!accountId || !scope) {
+      if (derivedGameName) derivedGameName.textContent = 'ทุกเกม';
+      if (derivedGameId) {
+        derivedGameId.textContent = 'Account แต่ละตัวจะผูกกับเกมจากข้อมูลจริง';
+      }
+      if (accountScopeNote) {
+        accountScopeNote.textContent =
+          'เลือก Account เพื่อดูข้อมูลของเกมที่ผูกกับ Account นั้น';
+      }
+      return;
+    }
+
+    if (derivedGameName) {
+      derivedGameName.textContent = scope.game || scope.gameId || '-';
+    }
+
+    if (derivedGameId) {
+      derivedGameId.textContent =
+        scope.gameId
+          ? `Game_ID: ${scope.gameId}`
+          : 'ยังไม่มี Game_ID ในข้อมูล';
+    }
+
+    if (accountScopeNote) {
+      accountScopeNote.textContent =
+        `${scope.account} → ${scope.game || scope.gameId || '-'}`;
+    }
+  };
+
+  const accountOptions = () =>
+    accountScopes.map((scope) => ({
+      value: scope.accountId,
+      label: `${scope.account} — ${scope.game || scope.gameId || '-'}`,
+    }));
 
   const scopedResult = () => {
     const source = fullResult || {};
     const filters = current();
     const filterRows = (rows) => (Array.isArray(rows) ? rows : []).filter((row) => {
-      if (filters.game && clean(row.Game_ID) !== filters.game) return false;
       if (filters.account && clean(row.Account_ID) !== filters.account) return false;
       return true;
     });
@@ -181,9 +243,14 @@
   const renderAiSnapshot = (result, ai) => {
     const firstScope = ai.scopes[0] || {};
     const analysis = firstScope.ai_analysis || {};
-    const scopeLabel = ai.scopes.length === 1
-      ? `${firstScope.Game_Name || firstScope.Game_ID || '-'} · ${firstScope.Account_Name || firstScope.Account_ID || '-'}`
-      : `${ai.scopes.length} Google scopes`;
+    const selectedAccountId = accountFilter?.value || '';
+    const canonicalScope = accountScopeById.get(selectedAccountId);
+
+    const scopeLabel = canonicalScope
+      ? `${canonicalScope.game || canonicalScope.gameId || '-'} · ${canonicalScope.account}`
+      : ai.scopes.length === 1
+        ? `${firstScope.Game_Name || firstScope.Game_ID || '-'} · ${firstScope.Account_Name || firstScope.Account_ID || '-'}`
+        : `${ai.scopes.length} Google scopes`;
 
     document.getElementById('aiScopeTitle').textContent = `Google AI Intelligence · ${scopeLabel}`;
     document.getElementById('aiExecutiveSummary').textContent =
@@ -381,11 +448,18 @@
 
       // Exactly one n8n execution for this page.
       fullResult = await UI.fetchInsights({});
-      scopeRows = buildScopeRows(fullResult);
+      accountScopes = buildAccountScopes(fullResult);
+      accountScopeById = new Map(
+        accountScopes.map((scope) => [scope.accountId, scope])
+      );
 
-      UI.fillSelectOptions(gameFilter, UI.gameOptions(scopeRows));
-      UI.fillSelectOptions(accountFilter, UI.accountOptions(scopeRows, ''));
+      UI.fillSelectOptions(
+        accountFilter,
+        accountOptions(),
+        'ทุก Account'
+      );
 
+      updateDerivedScope();
       render(scopedResult());
     } catch (error) {
       console.error('[Google Ads Insights]', error);
@@ -419,16 +493,8 @@
     document.getElementById('role').textContent =
       localStorage.getItem('role') || 'USER';
 
-    gameFilter?.addEventListener('change', () => {
-      if (accountFilter) accountFilter.value = '';
-      UI.fillSelectOptions(
-        accountFilter,
-        UI.accountOptions(scopeRows, gameFilter?.value || '')
-      );
-      if (fullResult) render(scopedResult());
-    });
-
     accountFilter?.addEventListener('change', () => {
+      updateDerivedScope();
       if (fullResult) render(scopedResult());
     });
 

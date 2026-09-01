@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Google Asset & Search Insights | AI Marketing Copilot</title>
-  <link rel="stylesheet" href="../assets/css/app.css?v=5.8.7" />
+  <link rel="stylesheet" href="../assets/css/app.css?v=5.8.8" />
   <style>
     :root{
       --bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;
@@ -83,6 +83,49 @@
     @media(max-width:1180px){.signal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-summary,.asset-health,.intent-grid{grid-template-columns:1fr}.action-grid{grid-template-columns:1fr}}
     @media(max-width:720px){.content{padding:16px}.filters,.signal-grid{grid-template-columns:1fr}.panel-header{flex-direction:column}.term-top{flex-direction:column}}
   </style>
+
+<style>
+.google-account-scope{min-width:0}
+.account-scope-note{
+  margin-top:6px;
+  color:#64748b;
+  font-size:11px;
+  line-height:1.4;
+}
+.google-derived-game{
+  align-self:end;
+  min-height:44px;
+  padding:9px 12px;
+  border:1px solid #dbe3ef;
+  border-radius:10px;
+  background:#f8fafc;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  column-gap:9px;
+  row-gap:2px;
+  align-items:center;
+}
+.google-derived-game .derived-label{
+  color:#64748b;
+  font-size:11px;
+  font-weight:700;
+  text-transform:uppercase;
+}
+.google-derived-game strong{
+  color:#0f172a;
+  font-size:14px;
+}
+.google-derived-game small{
+  grid-column:2;
+  color:#64748b;
+  font-size:10px;
+}
+@media(max-width:760px){
+  .google-derived-game{grid-template-columns:1fr}
+  .google-derived-game small{grid-column:1}
+}
+</style>
+
 </head>
 <body>
 <div class="shell">
@@ -106,8 +149,22 @@
           <div class="panel-badge" id="updatedAt">รอข้อมูล</div>
         </div>
         <div class="filters">
-          <div class="field"><label for="gameFilter">Game</label><select id="gameFilter"><option value="">ทั้งหมด</option></select></div>
-          <div class="field"><label for="accountFilter">Account</label><select id="accountFilter"><option value="">ทั้งหมด</option></select></div>
+          
+<div class="field google-account-scope">
+  <label for="accountFilter">Account</label>
+  <select id="accountFilter">
+    <option value="">ทั้งหมด</option>
+  </select>
+  <div class="account-scope-note" id="accountScopeNote">
+    เลือก Account เพื่อดูข้อมูลของเกมที่ผูกกับ Account นั้น
+  </div>
+</div>
+<div class="google-derived-game">
+  <span class="derived-label">Game</span>
+  <strong id="derivedGameName">ทุกเกม</strong>
+  <small id="derivedGameId">อ้างอิงจาก Account mapping ในข้อมูลจริง</small>
+</div>
+
         </div>
       </section>
 
@@ -178,6 +235,6 @@
     </main>
   </section>
 </div>
-<script src="../assets/js/config.js?v=5.8.7"></script><script src="../assets/js/tooltip.js?v=5.8.7"></script><script src="../assets/js/auth.js?v=5.8.7"></script><script src="../assets/js/sidebar.js?v=5.8.7"></script><script src="../assets/js/google-common.js?v=5.8.7"></script><script src="../assets/js/google-insights.js?v=5.8.7"></script>
+<script src="../assets/js/config.js?v=5.8.8"></script><script src="../assets/js/tooltip.js?v=5.8.8"></script><script src="../assets/js/auth.js?v=5.8.8"></script><script src="../assets/js/sidebar.js?v=5.8.8"></script><script src="../assets/js/google-common.js?v=5.8.8"></script><script src="../assets/js/google-insights.js?v=5.8.8"></script>
 </body>
 </html>

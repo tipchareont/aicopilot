@@ -89,11 +89,11 @@
     if (!accountId || !scope) {
       if (derivedGameName) derivedGameName.textContent = 'ทุกเกม';
       if (derivedGameId) {
-        derivedGameId.textContent = 'Account แต่ละตัวจะผูกกับเกมจากข้อมูลจริง';
+        derivedGameId.textContent = 'ALL';
       }
       if (accountScopeNote) {
         accountScopeNote.textContent =
-          'เลือก Account เพื่อดูข้อมูลของเกมที่ผูกกับ Account นั้น';
+          'เลือก Account เพื่อกำหนด Scope';
       }
       return;
     }
@@ -103,15 +103,11 @@
     }
 
     if (derivedGameId) {
-      derivedGameId.textContent =
-        scope.gameId
-          ? `Game_ID: ${scope.gameId}`
-          : 'ยังไม่มี Game_ID ในข้อมูล';
+      derivedGameId.textContent = scope.gameId || '-';
     }
 
     if (accountScopeNote) {
-      accountScopeNote.textContent =
-        `${scope.account} → ${scope.game || scope.gameId || '-'}`;
+      accountScopeNote.textContent = `Account ID: ${scope.accountId}`;
     }
   };
 

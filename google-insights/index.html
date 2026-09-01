@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Google Asset & Search Insights | AI Marketing Copilot</title>
-  <link rel="stylesheet" href="../assets/css/app.css?v=5.8.8" />
+  <link rel="stylesheet" href="../assets/css/app.css?v=5.8.9" />
   <style>
     :root{
       --bg:#f4f7fb;--surface:#fff;--border:#e5eaf1;--text:#18212f;--muted:#697386;
@@ -28,7 +28,7 @@
     .filter-panel{padding:18px 20px;display:grid;gap:14px}
     .filter-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
     .filter-top h2,.filter-top p{margin:0}.filter-top p{margin-top:4px;color:var(--muted);font-size:13px}
-    .filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .filters{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
     .field{display:grid;gap:6px}.field label{font-size:12px;font-weight:700;color:#475569}
     .field select{width:100%;min-width:0;padding:11px 12px;border:1px solid #cfd7e3;border-radius:10px;background:#fff}
     .panel-badge,.chip{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
@@ -86,43 +86,49 @@
 
 <style>
 .google-account-scope{min-width:0}
+.account-context-line{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+  margin-top:7px;
+  min-height:28px;
+}
+.context-label{
+  color:#64748b;
+  font-size:11px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+}
+.context-game{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 9px;
+  border-radius:999px;
+  background:#eef4ff;
+  color:#2456d3;
+  font-size:12px;
+  line-height:1;
+}
+.context-code{
+  display:inline-flex;
+  align-items:center;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#f1f5f9;
+  color:#475569;
+  font-size:10px;
+  font-weight:800;
+  line-height:1;
+}
 .account-scope-note{
-  margin-top:6px;
   color:#64748b;
   font-size:11px;
   line-height:1.4;
 }
-.google-derived-game{
-  align-self:end;
-  min-height:44px;
-  padding:9px 12px;
-  border:1px solid #dbe3ef;
-  border-radius:10px;
-  background:#f8fafc;
-  display:grid;
-  grid-template-columns:auto 1fr;
-  column-gap:9px;
-  row-gap:2px;
-  align-items:center;
-}
-.google-derived-game .derived-label{
-  color:#64748b;
-  font-size:11px;
-  font-weight:700;
-  text-transform:uppercase;
-}
-.google-derived-game strong{
-  color:#0f172a;
-  font-size:14px;
-}
-.google-derived-game small{
-  grid-column:2;
-  color:#64748b;
-  font-size:10px;
-}
 @media(max-width:760px){
-  .google-derived-game{grid-template-columns:1fr}
-  .google-derived-game small{grid-column:1}
+  .account-context-line{align-items:flex-start}
 }
 </style>
 
@@ -155,14 +161,12 @@
   <select id="accountFilter">
     <option value="">ทั้งหมด</option>
   </select>
-  <div class="account-scope-note" id="accountScopeNote">
-    เลือก Account เพื่อดูข้อมูลของเกมที่ผูกกับ Account นั้น
+  <div class="account-context-line">
+    <span class="context-label">Game</span>
+    <strong class="context-game" id="derivedGameName">ทุกเกม</strong>
+    <span class="context-code" id="derivedGameId">ALL</span>
+    <span class="account-scope-note" id="accountScopeNote">เลือก Account เพื่อกำหนด Scope</span>
   </div>
-</div>
-<div class="google-derived-game">
-  <span class="derived-label">Game</span>
-  <strong id="derivedGameName">ทุกเกม</strong>
-  <small id="derivedGameId">อ้างอิงจาก Account mapping ในข้อมูลจริง</small>
 </div>
 
         </div>
@@ -235,6 +239,6 @@
     </main>
   </section>
 </div>
-<script src="../assets/js/config.js?v=5.8.8"></script><script src="../assets/js/tooltip.js?v=5.8.8"></script><script src="../assets/js/auth.js?v=5.8.8"></script><script src="../assets/js/sidebar.js?v=5.8.8"></script><script src="../assets/js/google-common.js?v=5.8.8"></script><script src="../assets/js/google-insights.js?v=5.8.8"></script>
+<script src="../assets/js/config.js?v=5.8.9"></script><script src="../assets/js/tooltip.js?v=5.8.9"></script><script src="../assets/js/auth.js?v=5.8.9"></script><script src="../assets/js/sidebar.js?v=5.8.9"></script><script src="../assets/js/google-common.js?v=5.8.9"></script><script src="../assets/js/google-insights.js?v=5.8.9"></script>
 </body>
 </html>

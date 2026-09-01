@@ -5,9 +5,9 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>My Workspace | AI Marketing Copilot</title>
-<link href="../assets/css/app.css?v=5.8.8" rel="stylesheet"/>
-<link href="../assets/css/product.css?v=5.8.8" rel="stylesheet"/>
-<link href="../assets/css/workspace.css?v=5.8.8" rel="stylesheet"/>
+<link href="../assets/css/app.css?v=5.8.9" rel="stylesheet"/>
+<link href="../assets/css/product.css?v=5.8.9" rel="stylesheet"/>
+<link href="../assets/css/workspace.css?v=5.8.9" rel="stylesheet"/>
 </head>
 <body>
 <section aria-live="polite" class="loading hidden" id="loading">
@@ -160,6 +160,7 @@
 <table class="data-table workspace-table">
 <thead>
 <tr>
+<th>Platform</th>
 <th>Game</th>
 <th>Account</th>
 <th>Effective Level</th>
@@ -169,7 +170,7 @@
 <th>ตั้งวันที่เริ่ม Ads</th>
 </tr>
 </thead>
-<tbody id="accessTableBody"><tr><td class="empty" colspan="7">รอโหลดสิทธิ์</td></tr></tbody>
+<tbody id="accessTableBody"><tr><td class="empty" colspan="8">รอโหลดสิทธิ์</td></tr></tbody>
 </table>
 </div>
 </article>
@@ -180,8 +181,14 @@
 </div>
 <article class="panel health-filter-panel">
 <div class="health-filters">
+<div class="field"><label for="healthPlatform">Platform</label><select id="healthPlatform"></select></div>
 <div class="field"><label for="healthGame">Game</label><select id="healthGame"></select></div>
 <div class="field"><label for="healthAccount">Account</label><select id="healthAccount"></select></div>
+</div>
+<div class="workspace-scope-strip" id="healthScopeStrip">
+  <span class="platform-badge platform-meta" id="healthPlatformBadge">META</span>
+  <strong id="healthScopeGame">-</strong>
+  <span id="healthScopeAccount">-</span>
 </div>
 </article>
 <article class="panel data-start-date-panel">
@@ -199,6 +206,21 @@
 <article class="metric-card"><span>Missing Days</span><strong id="healthMissingCount">0</strong><small>ไม่นับวันที่ Verified Zero</small></article>
 <article class="metric-card"><span>Last Updated</span><strong id="healthUpdatedAt">-</strong><small>Data_Updated_At ล่าสุด</small></article>
 </div>
+<article class="panel hidden" id="datasetHealthPanel">
+<div class="panel-header">
+  <div>
+    <h3>Dataset Health</h3>
+    <p>พร้อมแสดง Coverage แยกตามชุดข้อมูล เช่น Google Performance / PMax / Search Term เมื่อ Backend ส่งรายละเอียดมา</p>
+  </div>
+  <span class="panel-badge" id="datasetHealthCount">0 Dataset</span>
+</div>
+<div class="table-wrap">
+<table class="data-table workspace-table">
+<thead><tr><th>Dataset</th><th>Data From</th><th>Data To</th><th>Missing</th><th>Last Updated</th><th>Status</th></tr></thead>
+<tbody id="datasetHealthBody"><tr><td class="empty" colspan="6">ยังไม่มี Dataset Detail</td></tr></tbody>
+</table>
+</div>
+</article>
 <article class="panel">
 <div class="panel-header"><div><h3>Coverage Summary</h3><p>วันที่สีแดงคือวันที่ยังไม่พบข้อมูลและยังไม่เคยยืนยันว่าเป็น Zero Delivery</p></div><span class="status-chip status-neutral" id="healthStatusBadge">UNKNOWN</span></div>
 <div class="panel-body">
@@ -209,15 +231,23 @@
 </section>
 <section class="workspace-section" data-section="repair">
 <div class="section-heading">
-<div><h2>Data Repair Center</h2><p>Backend จะตรวจ Session, Role, Game และวันที่ซ้ำอีกครั้งก่อนเริ่มงาน</p></div>
+<div><h2>Data Repair Center</h2><p>Backend จะตรวจ Session, Role, Platform, Game, Account และวันที่ซ้ำอีกครั้งก่อนเริ่มงาน</p></div>
 </div>
 <div class="repair-layout">
 <article class="panel repair-form-panel">
-<div class="panel-header"><div><h3>สร้างคำขอซ่อมข้อมูล</h3><p>Game Owner ซ่อมได้เฉพาะวันที่ขาด ส่วน Manager / Developer / Admin ใช้ Force Refresh ได้</p></div></div>
+<div class="panel-header"><div><h3>สร้างคำขอซ่อมข้อมูล</h3><p>เลือก Platform → Game → Account ก่อนตรวจช่วงข้อมูล Backend จะเป็นผู้เลือก Backfill Flow ที่ถูกต้องตาม Platform</p></div></div>
 <div class="panel-body repair-form">
-<div class="form-grid">
+<div class="repair-scope-grid">
+<div class="field"><label for="repairPlatform">Platform</label><select id="repairPlatform"></select></div>
 <div class="field"><label for="repairGame">Game</label><select id="repairGame"></select></div>
 <div class="field"><label for="repairAccount">Account</label><select id="repairAccount"></select></div>
+</div>
+<div class="workspace-scope-strip" id="repairScopeStrip">
+  <span class="platform-badge platform-meta" id="repairPlatformBadge">META</span>
+  <strong id="repairScopeGame">-</strong>
+  <span id="repairScopeAccount">-</span>
+</div>
+<div class="repair-date-grid">
 <div class="field"><label for="repairStartDate">วันที่เริ่มต้น</label><input id="repairStartDate" type="date"/></div>
 <div class="field"><label for="repairEndDate">วันที่สิ้นสุด</label><input id="repairEndDate" type="date"/></div>
 </div>
@@ -236,7 +266,7 @@
 <article><span>Verified Zero</span><strong id="previewZeroCount">0</strong></article>
 <article><span>วันที่ซ่อมได้</span><strong id="previewRepairCount">0</strong></article>
 </div>
-<div class="preview-detail" id="previewDetail"><p>เลือก Game, Account และช่วงวันที่ แล้วกด Preview Data</p></div>
+<div class="preview-detail" id="previewDetail"><p>เลือก Platform, Game, Account และช่วงวันที่ แล้วกด Preview Data</p></div>
 </div>
 </article>
 </div>
@@ -253,8 +283,8 @@
 <article class="panel">
 <div class="table-wrap">
 <table class="data-table workspace-table">
-<thead><tr><th>เวลา</th><th>Action</th><th>Module</th><th>Record</th><th>รายละเอียด</th></tr></thead>
-<tbody id="activityTableBody"><tr><td class="empty" colspan="5">ยังไม่มีกิจกรรม</td></tr></tbody>
+<thead><tr><th>เวลา</th><th>Platform</th><th>Action</th><th>Module</th><th>Record</th><th>รายละเอียด</th></tr></thead>
+<tbody id="activityTableBody"><tr><td class="empty" colspan="6">ยังไม่มีกิจกรรม</td></tr></tbody>
 </table>
 </div>
 </article>
@@ -276,12 +306,12 @@
 <button class="button-primary" id="backToWorkspaceButton" type="button">กลับไป My Workspace</button>
 </article>
 </section>
-<footer class="footer-note">AI Marketing Copilot · User Control Center · Frontend V5.4.1</footer>
+<footer class="footer-note">AI Marketing Copilot · User Control Center · Frontend V5.8.9</footer>
 </main>
 </section>
 </div>
-<script src="../assets/js/config.js?v=5.8.8"></script><script src="../assets/js/tooltip.js?v=5.8.8"></script>
-<script src="../assets/js/auth.js?v=5.8.8"></script>
-<script src="../assets/js/workspace.js?v=5.8.8"></script>
-<script src="../assets/js/sidebar.js?v=5.8.8"></script></body>
+<script src="../assets/js/config.js?v=5.8.9"></script><script src="../assets/js/tooltip.js?v=5.8.9"></script>
+<script src="../assets/js/auth.js?v=5.8.9"></script>
+<script src="../assets/js/workspace.js?v=5.8.9"></script>
+<script src="../assets/js/sidebar.js?v=5.8.9"></script></body>
 </html>

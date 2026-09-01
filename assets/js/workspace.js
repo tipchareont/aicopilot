@@ -40,9 +40,9 @@
     {key:'VIEWER',label:'Viewer',scope:'เฉพาะ Game / Account ที่ได้รับมอบหมาย',view:true,health:true,repair:false,force:false,startDate:false},
     {key:'EDITOR',label:'Editor',scope:'เฉพาะ Game / Account ที่ได้รับมอบหมาย',view:true,health:true,repair:true,force:false,startDate:false},
     {key:'GAME_OWNER',label:'Game Owner',scope:'เฉพาะเกมและ Account ที่เป็นเจ้าของ',view:true,health:true,repair:true,force:false,startDate:true},
-    {key:'MANAGER',label:'Manager',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true,startDate:true},
-    {key:'DEVELOPER',label:'Developer',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true,startDate:true},
-    {key:'ADMIN',label:'Admin',scope:'ทุก META Account ที่ Active',view:true,health:true,repair:true,force:true,startDate:true},
+    {key:'MANAGER',label:'Manager',scope:'ทุก Active Account ที่ได้รับสิทธิ์',view:true,health:true,repair:true,force:true,startDate:true},
+    {key:'DEVELOPER',label:'Developer',scope:'ทุก Active Account ที่ได้รับสิทธิ์',view:true,health:true,repair:true,force:true,startDate:true},
+    {key:'ADMIN',label:'Admin',scope:'ทุก Active Account ที่ได้รับสิทธิ์',view:true,health:true,repair:true,force:true,startDate:true},
   ];
 
   const normalizePermissionLevel = (value) => {
@@ -114,8 +114,43 @@
     else element.classList.add('status-neutral');
   };
 
-  const getAccess=()=>Array.isArray(state.overview?.access)?state.overview.access:[];
-  const selectedAccess=(prefix)=>{const id=$(`${prefix}Account`)?.value||'';return getAccess().find(r=>clean(r.account_id)===clean(id))||null};
+  const normalizePlatform=(value)=>clean(value||'META').toUpperCase();
+  const rawPlatform=(row)=>clean(row?.platform ?? row?.Platform ?? row?.platform_name ?? row?.source_platform ?? row?.Source_Platform);
+  const accessPlatform=(row)=>normalizePlatform(rawPlatform(row)||'META');
+  const platformClass=(platform)=>{
+    const p=normalizePlatform(platform);
+    if(p==='META')return 'platform-meta';
+    if(p==='GOOGLE')return 'platform-google';
+    if(p==='TIKTOK')return 'platform-tiktok';
+    return 'platform-other';
+  };
+  const normalizeAccessRow=(row)=>({
+    ...row,
+    platform:accessPlatform(row),
+    _platform_explicit:Boolean(rawPlatform(row)),
+    game_id:clean(row?.game_id ?? row?.Game_ID),
+    game_name:clean(row?.game_name ?? row?.Game_Name),
+    account_id:clean(row?.account_id ?? row?.Account_ID),
+    account_name:clean(row?.account_name ?? row?.Account_Name),
+  });
+  const getAccess=()=>Array.isArray(state.overview?.access)?state.overview.access.map(normalizeAccessRow):[];
+  const selectedAccess=(prefix)=>{
+    const platform=normalizePlatform($(`${prefix}Platform`)?.value||'META');
+    const id=$(`${prefix}Account`)?.value||'';
+    return getAccess().find(r=>accessPlatform(r)===platform&&clean(r.account_id)===clean(id))||null;
+  };
+  const scopePayload=(access)=>{
+    const payload={game_id:access?.game_id||'',account_id:access?.account_id||''};
+    if(access?._platform_explicit)payload.platform=access.platform;
+    return payload;
+  };
+  const rowPlatform=(row)=>{
+    const explicit=clean(row?.platform ?? row?.Platform ?? row?.source_platform ?? row?.Source_Platform);
+    if(explicit)return normalizePlatform(explicit);
+    const accountId=clean(row?.account_id ?? row?.Account_ID);
+    const match=getAccess().find(a=>clean(a.account_id)===accountId);
+    return match?.platform||'META';
+  };
 
   const hasViewAccess=()=>getAccess().some(row=>row.permissions?.can_view===true);
   const hasRepairAccess=()=>getAccess().some(row=>row.permissions?.can_repair_missing===true||row.permissions?.can_force_refresh===true);
@@ -152,57 +187,157 @@
     $('currentPermissionBadge').textContent=activeLabels.length?`Active: ${activeLabels.join(' + ')}`:'กำลังซิงก์';
     $('permissionMatrixBody').innerHTML=PERMISSION_LEVELS.map(level=>{const current=activeLevels.has(level.key);const cell=a=>`<td class="permission-cell ${a?'yes':'no'}">${a?'✓':'—'}</td>`;return `<tr class="${current?'permission-current':'permission-muted'}"><td><span class="access-badge">${escapeHtml(level.label)}</span>${current?'<span class="permission-current-label">สิทธิ์ของคุณ</span>':''}</td><td class="permission-scope">${escapeHtml(level.scope)}</td>${cell(level.view)}${cell(level.health)}${cell(level.repair)}${cell(level.force)}${cell(level.startDate)}</tr>`}).join('');
     $('accessCountBadge').textContent=`${rows.length} Account`;
-    $('accessTableBody').innerHTML=rows.length?rows.map(row=>`<tr><td><strong>${escapeHtml(row.game_name||row.game_id)}</strong><br><small>${escapeHtml(row.game_id)}</small></td><td>${escapeHtml(row.account_name||row.account_id)}<br><small>${escapeHtml(row.account_id)}</small></td><td><span class="access-badge">${escapeHtml(row.access_level)}</span></td><td class="${row.permissions?.can_view?'permission-yes':'permission-no'}">${row.permissions?.can_view?'✓':'—'}</td><td class="${row.permissions?.can_repair_missing?'permission-yes':'permission-no'}">${row.permissions?.can_repair_missing?'✓':'—'}</td><td class="${row.permissions?.can_force_refresh?'permission-yes':'permission-no'}">${row.permissions?.can_force_refresh?'✓':'—'}</td><td class="${row.permissions?.can_manage_data_start_date?'permission-yes':'permission-no'}">${row.permissions?.can_manage_data_start_date?'✓':'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">กำลังซิงก์สิทธิ์ Game และ Account</td></tr>';
+    $('accessTableBody').innerHTML=rows.length?rows.map(row=>`<tr><td><span class="platform-badge ${platformClass(row.platform)}">${escapeHtml(row.platform)}</span></td><td><strong>${escapeHtml(row.game_name||row.game_id)}</strong><br><small>${escapeHtml(row.game_id)}</small></td><td>${escapeHtml(row.account_name||row.account_id)}<br><small>${escapeHtml(row.account_id)}</small></td><td><span class="access-badge">${escapeHtml(row.access_level)}</span></td><td class="${row.permissions?.can_view?'permission-yes':'permission-no'}">${row.permissions?.can_view?'✓':'—'}</td><td class="${row.permissions?.can_repair_missing?'permission-yes':'permission-no'}">${row.permissions?.can_repair_missing?'✓':'—'}</td><td class="${row.permissions?.can_force_refresh?'permission-yes':'permission-no'}">${row.permissions?.can_force_refresh?'✓':'—'}</td><td class="${row.permissions?.can_manage_data_start_date?'permission-yes':'permission-no'}">${row.permissions?.can_manage_data_start_date?'✓':'—'}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">กำลังซิงก์สิทธิ์ Platform / Game / Account</td></tr>';
+  };
+
+  const renderScopeStrip=(prefix)=>{
+    const access=selectedAccess(prefix);
+    const badge=$(`${prefix}PlatformBadge`);
+    const game=$(`${prefix}ScopeGame`);
+    const account=$(`${prefix}ScopeAccount`);
+    if(!badge||!game||!account)return;
+    const platform=access?.platform||normalizePlatform($(`${prefix}Platform`)?.value||'META');
+    badge.textContent=platform;
+    badge.className=`platform-badge ${platformClass(platform)}`;
+    game.textContent=access?.game_name||access?.game_id||'-';
+    account.textContent=access?(access.account_name||access.account_id):'-';
   };
 
   const populateAccessSelects = () => {
     const access=getAccess();
+
     ['health','repair'].forEach(prefix=>{
-      const game=$(`${prefix}Game`),account=$(`${prefix}Account`); if(!game||!account)return;
-      const currentGame=game.value; const games=[...new Map(access.map(r=>[r.game_id,r])).values()];
-      if(!games.length){
+      const platform=$(`${prefix}Platform`);
+      const game=$(`${prefix}Game`);
+      const account=$(`${prefix}Account`);
+      if(!platform||!game||!account)return;
+
+      const currentPlatform=normalizePlatform(platform.value||'META');
+      const platformRows=[...new Map(access.map(r=>[r.platform,r])).values()];
+
+      if(!platformRows.length){
+        platform.innerHTML='<option value="">ไม่มี Platform ที่ได้รับสิทธิ์</option>';
         game.innerHTML='<option value="">ไม่มี Game ที่ได้รับสิทธิ์</option>';
         account.innerHTML='<option value="">ไม่มี Account ที่ได้รับสิทธิ์</option>';
-        game.disabled=true;account.disabled=true;
+        platform.disabled=true;game.disabled=true;account.disabled=true;
+        renderScopeStrip(prefix);
         if(prefix==='health')renderHealth();else syncRepairPermissions();
         return;
       }
-      game.disabled=false;account.disabled=false;
-      game.innerHTML=games.map(r=>`<option value="${escapeHtml(r.game_id)}">${escapeHtml(r.game_name||r.game_id)}</option>`).join('');
-      if(games.some(r=>r.game_id===currentGame))game.value=currentGame;
+
+      platform.disabled=false;game.disabled=false;account.disabled=false;
+      platform.innerHTML=platformRows.map(r=>`<option value="${escapeHtml(r.platform)}">${escapeHtml(r.platform)}</option>`).join('');
+      if(platformRows.some(r=>r.platform===currentPlatform))platform.value=currentPlatform;
+
+      const renderGames=()=>{
+        const rows=access.filter(r=>r.platform===normalizePlatform(platform.value));
+        const currentGame=game.value;
+        const games=[...new Map(rows.map(r=>[r.game_id,r])).values()];
+        game.innerHTML=games.map(r=>`<option value="${escapeHtml(r.game_id)}">${escapeHtml(r.game_name||r.game_id)}</option>`).join('');
+        if(games.some(r=>r.game_id===currentGame))game.value=currentGame;
+        renderAccounts();
+      };
+
       const renderAccounts=()=>{
-        const filtered=access.filter(r=>r.game_id===game.value),current=account.value;
-        account.innerHTML=filtered.map(r=>`<option value="${escapeHtml(r.account_id)}">${escapeHtml(r.account_name||r.account_id)}</option>`).join('');
-        if(filtered.some(r=>r.account_id===current))account.value=current;
+        const rows=access.filter(r=>
+          r.platform===normalizePlatform(platform.value) &&
+          r.game_id===game.value
+        );
+        const current=account.value;
+        account.innerHTML=rows.map(r=>`<option value="${escapeHtml(r.account_id)}">${escapeHtml(r.account_name||r.account_id)}</option>`).join('');
+        if(rows.some(r=>r.account_id===current))account.value=current;
+        renderScopeStrip(prefix);
         if(prefix==='health')renderHealth();else syncRepairPermissions();
       };
-      game.onchange=renderAccounts;account.onchange=prefix==='health'?renderHealth:syncRepairPermissions;renderAccounts();
+
+      platform.onchange=renderGames;
+      game.onchange=renderAccounts;
+      account.onchange=()=>{
+        renderScopeStrip(prefix);
+        if(prefix==='health')renderHealth();else syncRepairPermissions();
+      };
+
+      renderGames();
     });
   };
 
+  const renderDatasetHealth=(health)=>{
+    const panel=$('datasetHealthPanel');
+    const body=$('datasetHealthBody');
+    const count=$('datasetHealthCount');
+    if(!panel||!body||!count)return;
+
+    const datasets=[
+      ...(Array.isArray(health?.datasets)?health.datasets:[]),
+      ...(Array.isArray(health?.sources)?health.sources:[]),
+      ...(Array.isArray(health?.dataset_health)?health.dataset_health:[]),
+    ];
+
+    const unique=[...new Map(datasets.map((row,i)=>{
+      const name=clean(row?.dataset||row?.dataset_name||row?.source||row?.source_name||row?.table_name||`Dataset ${i+1}`);
+      return [name,row];
+    })).entries()];
+
+    if(!unique.length){
+      panel.classList.add('hidden');
+      body.innerHTML='<tr><td class="empty" colspan="6">ยังไม่มี Dataset Detail</td></tr>';
+      count.textContent='0 Dataset';
+      return;
+    }
+
+    panel.classList.remove('hidden');
+    count.textContent=`${unique.length} Dataset`;
+    body.innerHTML=unique.map(([name,row])=>{
+      const missing=Number(row?.missing_days_count??row?.missing_count??0);
+      const status=clean(row?.status||'UNKNOWN').toUpperCase();
+      return `<tr><td><strong>${escapeHtml(name)}</strong></td><td>${escapeHtml(formatDate(row?.data_from||row?.from))}</td><td>${escapeHtml(formatDate(row?.data_to||row?.to))}</td><td>${missing.toLocaleString('th-TH')}</td><td>${escapeHtml(formatDateTime(row?.last_updated_at||row?.updated_at))}</td><td><span class="status-chip ${['HEALTHY','READY','SUCCESS'].includes(status)?'status-healthy':['MISSING_DATA','STALE','PARTIAL'].includes(status)?'status-warning':status==='UNKNOWN'?'status-neutral':'status-running'}">${escapeHtml(status)}</span></td></tr>`;
+    }).join('');
+  };
+
   const renderHealth = () => {
-    const access=selectedAccess('health'),rows=Array.isArray(state.overview?.health)?state.overview.health:[],health=rows.find(r=>clean(r.account_id)===clean(access?.account_id))||{};
-    $('healthFrom').textContent=formatDate(health.data_from);$('healthTo').textContent=formatDate(health.data_to);$('healthMissingCount').textContent=Number(health.missing_days_count||0).toLocaleString('th-TH');$('healthUpdatedAt').textContent=formatDateTime(health.last_updated_at);setStatusChip($('healthStatusBadge'),health.status||'UNKNOWN');
-    const missing=Array.isArray(health.missing_dates)?health.missing_dates:[],zero=Array.isArray(health.verified_zero_dates)?health.verified_zero_dates:[];
-    const chips=[...missing.map(d=>`<span class="date-chip missing">${formatDate(d)}</span>`),...zero.slice(-30).map(d=>`<span class="date-chip zero">Zero: ${formatDate(d)}</span>`)];
+    const access=selectedAccess('health');
+    const rows=Array.isArray(state.overview?.health)?state.overview.health:[];
+    const health=rows.find(r=>
+      rowPlatform(r)===accessPlatform(access||{}) &&
+      clean(r.account_id??r.Account_ID)===clean(access?.account_id)
+    )||{};
+
+    $('healthFrom').textContent=formatDate(health.data_from);
+    $('healthTo').textContent=formatDate(health.data_to);
+    $('healthMissingCount').textContent=Number(health.missing_days_count||0).toLocaleString('th-TH');
+    $('healthUpdatedAt').textContent=formatDateTime(health.last_updated_at);
+    setStatusChip($('healthStatusBadge'),health.status||'UNKNOWN');
+
+    const missing=Array.isArray(health.missing_dates)?health.missing_dates:[];
+    const zero=Array.isArray(health.verified_zero_dates)?health.verified_zero_dates:[];
+    const chips=[
+      ...missing.map(d=>`<span class="date-chip missing">${formatDate(d)}</span>`),
+      ...zero.slice(-30).map(d=>`<span class="date-chip zero">Zero: ${formatDate(d)}</span>`)
+    ];
     $('missingDateList').innerHTML=chips.length?chips.join(''):'<span class="empty-inline">ไม่พบวันที่ขาดในช่วง Coverage ปัจจุบัน</span>';
+
     const canManage=access?.permissions?.can_manage_data_start_date===true;
     const startDate=clean(health.data_start_date||access?.data_start_date||health.data_from).slice(0,10);
     $('healthDataStartDate').value=startDate;
     $('healthDataStartDate').disabled=!canManage;
     $('saveDataStartDateButton').classList.toggle('hidden',!canManage);
-    $('dataStartDateHelp').textContent=canManage?'ใช้กำหนดวันแรกที่ระบบเริ่มตรวจ Missing Data ของ Account นี้':'คุณดูค่านี้ได้ แต่ Role ปัจจุบันไม่มีสิทธิ์แก้ไข';
+    $('dataStartDateHelp').textContent=canManage
+      ?`ใช้กำหนดวันแรกที่ระบบเริ่มตรวจ Missing Data ของ ${access?.platform||'Platform'} Account นี้`
+      :'คุณดูค่านี้ได้ แต่ Role ปัจจุบันไม่มีสิทธิ์แก้ไข';
+
+    renderScopeStrip('health');
+    renderDatasetHealth(health);
   };
 
   const saveDataStartDate=async()=>{
     if(state.savingDataStartDate)return;
     const access=selectedAccess('health'),date=$('healthDataStartDate').value;
-    if(!access)throw new Error('กรุณาเลือก Game และ Account');
+    if(!access)throw new Error('กรุณาเลือก Platform, Game และ Account');
     if(access.permissions?.can_manage_data_start_date!==true)throw new Error('บัญชีนี้ไม่มีสิทธิ์แก้วันที่เริ่มเก็บข้อมูล Ads');
     if(!date)throw new Error('กรุณาเลือกวันที่เริ่มเก็บข้อมูล Ads');
     state.savingDataStartDate=true;$('saveDataStartDateButton').disabled=true;$('dataStartDateMessage').textContent='กำลังบันทึก...';$('dataStartDateMessage').className='form-message';
     try{
-      const result=await request({action:'UPDATE_DATA_START_DATE',game_id:access.game_id,account_id:access.account_id,data_start_date:date});
+      const result=await request({action:'UPDATE_DATA_START_DATE',...scopePayload(access),data_start_date:date});
       if(!result.bootstrap)throw new Error('Backend ไม่คืน Bootstrap ที่อัปเดตแล้ว');
       state.overview=result.bootstrap;state.permissionsResolved=true;saveLocalCache(state.overview);window.Auth.saveWorkspaceBootstrap(state.overview);
       renderProfile();renderAccess();populateAccessSelects();renderHealth();notifyPermissionUpdate();
@@ -212,16 +347,16 @@
 
   const renderActivity = () => {
     const rows=Array.isArray(state.overview?.repair_requests)?state.overview.repair_requests:[];
-    $('activityTableBody').innerHTML=rows.length?rows.map(row=>`<tr><td>${escapeHtml(formatDateTime(row.updated_at||row.started_at))}</td><td>${escapeHtml(row.request_mode||'DATA_REPAIR')}</td><td>DATA_REPAIR</td><td>${escapeHtml(row.request_id)}</td><td>${escapeHtml(`${row.status||'-'} · ${row.game_id||'-'} · ${row.start_date||'-'} ถึง ${row.end_date||'-'}`)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">ยังไม่มีคำขอ Data Repair</td></tr>';
+    $('activityTableBody').innerHTML=rows.length?rows.map(row=>{const platform=rowPlatform(row);return `<tr><td>${escapeHtml(formatDateTime(row.updated_at||row.started_at))}</td><td><span class="platform-badge ${platformClass(platform)}">${escapeHtml(platform)}</span></td><td>${escapeHtml(row.request_mode||'DATA_REPAIR')}</td><td>DATA_REPAIR</td><td>${escapeHtml(row.request_id)}</td><td>${escapeHtml(`${row.status||'-'} · ${row.game_id||'-'} · ${row.start_date||'-'} ถึง ${row.end_date||'-'}`)}</td></tr>`}).join(''):'<tr><td colspan="6" class="empty">ยังไม่มีคำขอ Data Repair</td></tr>';
   };
 
-  const syncRepairPermissions=()=>{const access=selectedAccess('repair'),canForce=Boolean(access?.permissions?.can_force_refresh);$('forceRefreshRow').classList.toggle('hidden',!canForce);if(!canForce)$('forceRefresh').checked=false;$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true;setStatusChip($('previewStatusBadge'),'รอ Preview')};
-  const renderPreview=(preview)=>{state.preview=preview;$('previewSelectedCount').textContent=preview.selected_dates_count||0;$('previewExistingCount').textContent=preview.existing_dates_count||0;$('previewZeroCount').textContent=preview.verified_zero_dates_count||0;$('previewRepairCount').textContent=preview.repair_dates_count||0;setStatusChip($('previewStatusBadge'),preview.allowed?'READY':'REJECTED');$('startRepairButton').disabled=!preview.allowed;const ranges=Array.isArray(preview.recommended_missing_ranges)?preview.recommended_missing_ranges:[];$('previewDetail').innerHTML=[`<p><strong>${escapeHtml(preview.message||'')}</strong></p>`,ranges.length?`<ul>${ranges.map(r=>`<li>${formatDate(r.start_date)} – ${formatDate(r.end_date)}</li>`).join('')}</ul>`:'',preview.force_refresh?'<p>คำขอนี้จะ Refresh วันที่ที่มีข้อมูลอยู่แล้ว และต้องมีเหตุผลประกอบ</p>':''].join('');$('repairMessage').textContent=preview.allowed?'ตรวจสอบผ่าน สามารถเริ่มซ่อมข้อมูลได้':(preview.message||'คำขอไม่ผ่านเงื่อนไข');$('repairMessage').className=`form-message ${preview.allowed?'success':'error'}`};
+  const syncRepairPermissions=()=>{const access=selectedAccess('repair');renderScopeStrip('repair');const canForce=Boolean(access?.permissions?.can_force_refresh);$('forceRefreshRow').classList.toggle('hidden',!canForce);if(!canForce)$('forceRefresh').checked=false;$('reasonRow').classList.toggle('hidden',!$('forceRefresh').checked);state.preview=null;$('startRepairButton').disabled=true;setStatusChip($('previewStatusBadge'),'รอ Preview')};
+  const renderPreview=(preview)=>{state.preview=preview;$('previewSelectedCount').textContent=preview.selected_dates_count||0;$('previewExistingCount').textContent=preview.existing_dates_count||0;$('previewZeroCount').textContent=preview.verified_zero_dates_count||0;$('previewRepairCount').textContent=preview.repair_dates_count||0;setStatusChip($('previewStatusBadge'),preview.allowed?'READY':'REJECTED');$('startRepairButton').disabled=!preview.allowed;const ranges=Array.isArray(preview.recommended_missing_ranges)?preview.recommended_missing_ranges:[];const targets=[...(Array.isArray(preview.repair_targets)?preview.repair_targets:[]),...(Array.isArray(preview.datasets)?preview.datasets:[])].map(v=>typeof v==='string'?v:(v?.name||v?.dataset||v?.table_name||'')).filter(Boolean);$('previewDetail').innerHTML=[`<p><strong>${escapeHtml(preview.message||'')}</strong></p>`,targets.length?`<p><strong>Repair Target:</strong> ${targets.map(escapeHtml).join(' · ')}</p>`:'',ranges.length?`<ul>${ranges.map(r=>`<li>${formatDate(r.start_date)} – ${formatDate(r.end_date)}</li>`).join('')}</ul>`:'',preview.force_refresh?'<p>คำขอนี้จะ Refresh วันที่ที่มีข้อมูลอยู่แล้ว และต้องมีเหตุผลประกอบ</p>':''].join('');$('repairMessage').textContent=preview.allowed?'ตรวจสอบผ่าน สามารถเริ่มซ่อมข้อมูลได้':(preview.message||'คำขอไม่ผ่านเงื่อนไข');$('repairMessage').className=`form-message ${preview.allowed?'success':'error'}`};
 
-  const previewRepair=async()=>{if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ใช้ Data Repair');const access=selectedAccess('repair'),start=$('repairStartDate').value,end=$('repairEndDate').value;if(!access||!start||!end)throw new Error('กรุณาเลือก Game, Account และช่วงวันที่');const result=await request({action:'PREVIEW_REPAIR',game_id:access.game_id,account_id:access.account_id,start_date:start,end_date:end,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});renderPreview(result.preview||result)};
-  const startRepair=async()=>{if(state.startingRepair)return;if(!state.preview?.allowed)throw new Error('กรุณา Preview และแก้เงื่อนไขให้ผ่านก่อน');state.startingRepair=true;try{const access=selectedAccess('repair');const result=await request({action:'START_REPAIR',game_id:access.game_id,account_id:access.account_id,start_date:$('repairStartDate').value,end_date:$('repairEndDate').value,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});if(!result.request_id)throw new Error('Backend ไม่คืน Request ID');state.activeRequestId=result.request_id;localStorage.setItem('active_repair_request_id',result.request_id);$('repairProgressPanel').classList.remove('hidden');$('repairRequestId').textContent=result.request_id;updateRepairProgress(result.status||'QUEUED',result.message||'ระบบรับคำขอแล้ว');startPolling()}finally{state.startingRepair=false}};
+  const previewRepair=async()=>{if(!hasRepairAccess())throw new Error('บัญชีนี้ไม่มีสิทธิ์ใช้ Data Repair');const access=selectedAccess('repair'),start=$('repairStartDate').value,end=$('repairEndDate').value;if(!access||!start||!end)throw new Error('กรุณาเลือก Platform, Game, Account และช่วงวันที่');const result=await request({action:'PREVIEW_REPAIR',...scopePayload(access),start_date:start,end_date:end,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});renderPreview(result.preview||result)};
+  const startRepair=async()=>{if(state.startingRepair)return;if(!state.preview?.allowed)throw new Error('กรุณา Preview และแก้เงื่อนไขให้ผ่านก่อน');state.startingRepair=true;try{const access=selectedAccess('repair');const result=await request({action:'START_REPAIR',...scopePayload(access),start_date:$('repairStartDate').value,end_date:$('repairEndDate').value,force_refresh:$('forceRefresh').checked,reason:$('repairReason').value});if(!result.request_id)throw new Error('Backend ไม่คืน Request ID');state.activeRequestId=result.request_id;localStorage.setItem('active_repair_request_id',result.request_id);$('repairProgressPanel').classList.remove('hidden');$('repairRequestId').textContent=result.request_id;updateRepairProgress(result.status||'QUEUED',result.message||'ระบบรับคำขอแล้ว');startPolling()}finally{state.startingRepair=false}};
 
-  const updateRepairProgress=(status,message)=>{const upper=clean(status).toUpperCase(),map={QUEUED:10,VALIDATING:20,BACKFILL_RUNNING:45,MIGRATION_RUNNING:70,SUMMARY_REBUILDING:85,COMPLETED:100,FAILED:100,REJECTED:100};setStatusChip($('repairStatusBadge'),upper);$('repairProgressBar').style.width=`${map[upper]||15}%`;$('repairProgressMessage').textContent=message||upper};
+  const updateRepairProgress=(status,message)=>{const upper=clean(status).toUpperCase(),map={QUEUED:10,VALIDATING:20,BACKFILL_RUNNING:45,GOOGLE_BACKFILL_RUNNING:45,INSIGHT_BACKFILL_RUNNING:60,GOOGLE_INSIGHT_BACKFILL_RUNNING:60,MIGRATION_RUNNING:70,GOOGLE_ETL_RUNNING:70,SUMMARY_REBUILDING:85,COMPLETED:100,FAILED:100,REJECTED:100};setStatusChip($('repairStatusBadge'),upper);$('repairProgressBar').style.width=`${map[upper]||15}%`;$('repairProgressMessage').textContent=message||upper};
   const stopPolling=()=>{clearTimeout(state.pollTimer);state.pollTimer=null;state.pollInFlight=false};
   const schedulePoll=(ms)=>{clearTimeout(state.pollTimer);state.pollTimer=setTimeout(runRepairPoll,ms)};
   const runRepairPoll=async()=>{if(!state.activeRequestId||state.pollInFlight)return;if(document.hidden){schedulePoll(30000);return}state.pollInFlight=true;try{const result=await request({action:'REPAIR_STATUS',request_id:state.activeRequestId}),repair=result?.repair_request;if(!repair||typeof repair!=='object')throw new Error('Backend ไม่คืนสถานะคำขอ');const status=clean(repair.status).toUpperCase();updateRepairProgress(status,repair.message||repair.error_message||`สถานะ: ${status}`);state.pollFailures=0;if(['COMPLETED','FAILED','REJECTED'].includes(status)){if(result.bootstrap_patch&&typeof result.bootstrap_patch==='object'){state.overview={...(state.overview||{}),...result.bootstrap_patch};saveLocalCache(state.overview);renderHealth();renderActivity();populateAccessSelects()}stopPolling();localStorage.removeItem('active_repair_request_id');state.activeRequestId='';return}schedulePoll(30000)}catch(error){state.pollFailures+=1;const delay=Math.min(30000*(2**Math.min(state.pollFailures,2)),120000);$('repairProgressMessage').textContent=`${error.message} · ระบบจะลองใหม่ใน ${Math.round(delay/1000)} วินาที`;if(state.pollFailures>=5){stopPolling();$('repairProgressMessage').textContent=`${error.message} · หยุดเช็กอัตโนมัติเพื่อป้องกัน API Limit งาน Backend อาจยังทำงานอยู่`;return}schedulePoll(delay)}finally{state.pollInFlight=false}};

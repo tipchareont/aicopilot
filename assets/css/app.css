@@ -34,9 +34,97 @@
 @keyframes login-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.login-spinner{animation-duration:1.8s}}
 
-/* V5.7.5 contextual help */
-.info-tip{position:relative;display:inline-flex;vertical-align:middle;margin-left:6px}
-.info-tip>button{width:18px;height:18px;border-radius:50%;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:11px;font-weight:800;line-height:16px;padding:0;cursor:help}
-.info-tip .info-pop{position:absolute;z-index:50;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:min(320px,80vw);padding:10px 12px;border-radius:10px;background:#111827;color:#fff;font-size:12px;font-weight:500;line-height:1.5;box-shadow:0 10px 30px rgba(15,23,42,.18);opacity:0;visibility:hidden;pointer-events:none;transition:.15s ease}
-.info-tip .info-pop:after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#111827}
-.info-tip:hover .info-pop,.info-tip:focus-within .info-pop{opacity:1;visibility:visible}
+/* V5.8.6 contextual help — portal / viewport-safe */
+.info-tip{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  vertical-align:middle;
+  margin-left:6px;
+}
+.info-tip>button{
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+  border-radius:50%;
+  border:1px solid #cbd5e1;
+  background:#fff;
+  color:#475569;
+  font-size:11px;
+  font-weight:800;
+  line-height:16px;
+  padding:0;
+  cursor:help;
+  outline:none;
+}
+.info-tip>button:hover{
+  border-color:#94a3b8;
+  background:#f8fafc;
+  color:#0f172a;
+}
+.info-tip>button:focus-visible{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37,99,235,.16);
+}
+
+/* The inline copy remains hidden. JS portals it to <body> before opening. */
+.info-tip .info-pop{
+  display:none;
+}
+
+/* Body-level portal prevents clipping by overflow:hidden, cards, tables,
+   transformed parents, drawers, charts, and nested stacking contexts. */
+.info-pop-portal{
+  position:fixed!important;
+  display:block!important;
+  z-index:2147483000!important;
+  box-sizing:border-box;
+  max-width:calc(100vw - 24px);
+  padding:10px 12px;
+  border-radius:10px;
+  background:#111827;
+  color:#fff;
+  font-size:12px;
+  font-weight:500;
+  line-height:1.5;
+  text-align:left;
+  box-shadow:0 14px 36px rgba(15,23,42,.24);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:none!important;
+  transition:opacity .12s ease,visibility .12s ease;
+}
+.info-pop-portal.is-open{
+  opacity:1;
+  visibility:visible;
+}
+.info-pop-portal::after{
+  content:"";
+  position:absolute;
+  left:var(--tooltip-arrow-left,50%);
+  width:0;
+  height:0;
+  transform:translateX(-50%);
+  border:6px solid transparent;
+}
+.info-pop-portal[data-placement="top"]::after{
+  top:100%;
+  border-top-color:#111827;
+}
+.info-pop-portal[data-placement="bottom"]::after{
+  bottom:100%;
+  border-bottom-color:#111827;
+}
+@media(max-width:520px){
+  .info-pop-portal{
+    font-size:12px;
+    line-height:1.45;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .info-pop-portal{
+    transition:none;
+  }
+}
+

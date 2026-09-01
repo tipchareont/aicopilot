@@ -21,15 +21,12 @@
     return el.id;
   };
 
-  const getParts = (tip) => {
-    if (!tip) return {};
-    return {
-      button: tip.querySelector('button'),
-      pop: tip.querySelector('.info-pop'),
-    };
-  };
+  const getParts = (tip) => ({
+    button: tip?.querySelector('button'),
+    pop: tip?.querySelector('.info-pop'),
+  });
 
-  const storeOriginalPosition = (pop) => {
+  const storeOriginal = (pop) => {
     if (state.original.has(pop)) return;
     state.original.set(pop, {
       parent: pop.parentNode,
@@ -38,14 +35,14 @@
   };
 
   const portalToBody = (pop) => {
-    storeOriginalPosition(pop);
+    storeOriginal(pop);
     if (pop.parentNode !== document.body) {
       document.body.appendChild(pop);
     }
     pop.classList.add('info-pop-portal');
   };
 
-  const restoreFromPortal = (pop) => {
+  const restore = (pop) => {
     const original = state.original.get(pop);
     if (!original?.parent) return;
 
@@ -63,33 +60,41 @@
     }
   };
 
-  const measureAndPlace = (tip, button, pop) => {
-    if (!tip || !button || !pop || !pop.classList.contains('is-open')) return;
+  const hardCloseAll = () => {
+    document.querySelectorAll('.info-pop-portal.is-open').forEach((pop) => {
+      pop.classList.remove('is-open');
+      pop.setAttribute('aria-hidden', 'true');
+      restore(pop);
+    });
+  };
 
-    const buttonRect = button.getBoundingClientRect();
+  const place = (button, pop) => {
+    if (!button || !pop || !pop.classList.contains('is-open')) return;
 
-    // Width must fit the viewport and remain readable.
-    const maxWidth = Math.max(180, Math.min(MAX_WIDTH, window.innerWidth - EDGE * 2));
-    pop.style.width = px(maxWidth);
+    const b = button.getBoundingClientRect();
+    const width = Math.max(180, Math.min(MAX_WIDTH, window.innerWidth - EDGE * 2));
+    pop.style.width = px(width);
 
-    const popRect = pop.getBoundingClientRect();
+    const p = pop.getBoundingClientRect();
+    const roomAbove = b.top;
+    const roomBelow = window.innerHeight - b.bottom;
+    const placement =
+      roomAbove >= p.height + GAP || roomAbove >= roomBelow
+        ? 'top'
+        : 'bottom';
 
-    const roomAbove = buttonRect.top;
-    const roomBelow = window.innerHeight - buttonRect.bottom;
-    const preferAbove = roomAbove >= popRect.height + GAP || roomAbove >= roomBelow;
-    const placement = preferAbove ? 'top' : 'bottom';
+    let top =
+      placement === 'top'
+        ? b.top - p.height - GAP
+        : b.bottom + GAP;
 
-    let top = placement === 'top'
-      ? buttonRect.top - popRect.height - GAP
-      : buttonRect.bottom + GAP;
+    top = Math.max(EDGE, Math.min(top, window.innerHeight - p.height - EDGE));
 
-    top = Math.max(EDGE, Math.min(top, window.innerHeight - popRect.height - EDGE));
+    let left = b.left + b.width / 2 - p.width / 2;
+    left = Math.max(EDGE, Math.min(left, window.innerWidth - p.width - EDGE));
 
-    let left = buttonRect.left + buttonRect.width / 2 - popRect.width / 2;
-    left = Math.max(EDGE, Math.min(left, window.innerWidth - popRect.width - EDGE));
-
-    const buttonCenter = buttonRect.left + buttonRect.width / 2;
-    const arrowLeft = Math.max(14, Math.min(buttonCenter - left, popRect.width - 14));
+    const buttonCenter = b.left + b.width / 2;
+    const arrowLeft = Math.max(14, Math.min(buttonCenter - left, p.width - 14));
 
     pop.style.left = px(left);
     pop.style.top = px(top);
@@ -97,53 +102,51 @@
     pop.dataset.placement = placement;
   };
 
-  const close = ({ restore = true } = {}) => {
+  const close = () => {
     clearTimeout(state.hideTimer);
 
     const tip = state.openTip;
-    if (!tip) return;
+    if (tip) {
+      const { button, pop } = getParts(tip);
 
-    const { button, pop } = getParts(tip);
+      if (button) button.setAttribute('aria-expanded', 'false');
 
-    if (button) {
-      button.setAttribute('aria-expanded', 'false');
-    }
-
-    if (pop) {
-      pop.classList.remove('is-open');
-      pop.setAttribute('aria-hidden', 'true');
-
-      if (restore) {
-        restoreFromPortal(pop);
+      if (pop) {
+        pop.classList.remove('is-open');
+        pop.setAttribute('aria-hidden', 'true');
+        restore(pop);
       }
     }
 
     state.openTip = null;
     state.openButton = null;
+
+    // Defensive cleanup: never allow stale black boxes to remain.
+    hardCloseAll();
   };
 
   const open = (tip) => {
-    if (!tip) return;
+    clearTimeout(state.hideTimer);
 
     if (state.openTip && state.openTip !== tip) {
       close();
+    } else {
+      hardCloseAll();
     }
 
     const { button, pop } = getParts(tip);
     if (!button || !pop) return;
 
-    clearTimeout(state.hideTimer);
+    const id = ensureId(pop);
 
-    const popId = ensureId(pop);
+    button.setAttribute('aria-describedby', id);
+    button.setAttribute('aria-expanded', 'true');
+
     pop.setAttribute('role', 'tooltip');
     pop.setAttribute('aria-hidden', 'false');
 
-    button.setAttribute('aria-describedby', popId);
-    button.setAttribute('aria-expanded', 'true');
-
     portalToBody(pop);
 
-    // Reset positioning before measuring.
     pop.style.left = '0px';
     pop.style.top = '0px';
     pop.classList.add('is-open');
@@ -151,15 +154,13 @@
     state.openTip = tip;
     state.openButton = button;
 
-    requestAnimationFrame(() => measureAndPlace(tip, button, pop));
+    requestAnimationFrame(() => place(button, pop));
   };
 
-  const scheduleClose = (tip, delay = 90) => {
+  const closeSoon = (tip, delay = 35) => {
     clearTimeout(state.hideTimer);
     state.hideTimer = window.setTimeout(() => {
-      if (state.openTip === tip) {
-        close();
-      }
+      if (state.openTip === tip) close();
     }, delay);
   };
 
@@ -170,37 +171,27 @@
     if (!button || !pop) return;
 
     tip.dataset.tooltipBound = '1';
-
     button.setAttribute('aria-haspopup', 'true');
     button.setAttribute('aria-expanded', 'false');
     pop.setAttribute('aria-hidden', 'true');
 
-    tip.addEventListener('mouseenter', () => open(tip));
-    tip.addEventListener('mouseleave', () => scheduleClose(tip));
+    /*
+     * V5.8.7:
+     * The popup is portaled out of `.info-tip`, so hover lifetime must be
+     * attached to the button that never moves in the DOM.
+     */
+    button.addEventListener('pointerenter', () => open(tip));
+    button.addEventListener('pointerleave', () => closeSoon(tip, 35));
 
-    tip.addEventListener('focusin', () => open(tip));
-    tip.addEventListener('focusout', (event) => {
-      if (!tip.contains(event.relatedTarget)) {
-        scheduleClose(tip, 0);
-      }
-    });
+    button.addEventListener('focus', () => open(tip));
+    button.addEventListener('blur', () => closeSoon(tip, 0));
 
     button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
 
-      if (state.openTip === tip) {
-        close();
-      } else {
-        open(tip);
-      }
-    });
-
-    // Touch/pointer users should be able to tap the i icon.
-    button.addEventListener('pointerdown', (event) => {
-      if (event.pointerType === 'touch') {
-        event.stopPropagation();
-      }
+      if (state.openTip === tip) close();
+      else open(tip);
     });
   };
 
@@ -208,34 +199,36 @@
     root.querySelectorAll?.(SELECTOR).forEach(bind);
   };
 
-  const reposition = () => {
+  document.addEventListener('pointerdown', (event) => {
     if (!state.openTip) return;
-    const { button, pop } = getParts(state.openTip);
-    if (!button || !pop) {
-      close();
-      return;
-    }
-    requestAnimationFrame(() => measureAndPlace(state.openTip, button, pop));
-  };
-
-  document.addEventListener('click', (event) => {
-    if (!state.openTip) return;
-    if (state.openTip.contains(event.target)) return;
-    if (event.target.closest?.('.info-pop-portal')) return;
+    if (state.openButton?.contains(event.target)) return;
     close();
   });
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      const button = state.openButton;
       close();
-      state.openButton?.focus?.();
+      button?.focus?.();
     }
   });
 
-  window.addEventListener('resize', reposition, { passive: true });
-  window.addEventListener('scroll', reposition, { passive: true, capture: true });
+  window.addEventListener('resize', () => {
+    if (!state.openTip) return;
+    const { button, pop } = getParts(state.openTip);
+    requestAnimationFrame(() => place(button, pop));
+  }, { passive: true });
 
-  // Future-proof dynamically inserted contextual help.
+  window.addEventListener('scroll', () => {
+    if (state.openTip) close();
+  }, { passive: true, capture: true });
+
+  window.addEventListener('blur', close);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) close();
+  });
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
@@ -247,11 +240,9 @@
   });
 
   const init = () => {
+    hardCloseAll();
     bindAll();
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
   };
 
   if (document.readyState === 'loading') {

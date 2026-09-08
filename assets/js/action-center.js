@@ -8,8 +8,8 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 7;
-  const cacheKey = () => `ai_marketing_copilot_action_center_v6_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const CACHE_VERSION = 8;
+  const cacheKey = () => `ai_marketing_copilot_action_center_v7_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
   function readCache(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||'null');return Number(x?.version||0)===CACHE_VERSION&&x?.data?x:null}catch{return null}}
@@ -68,22 +68,26 @@
   });
 
   const METRIC_LABELS = Object.freeze({
-    COST_PER_COMPLETE_REGISTER:'ค่าใช้จ่ายต่อการลงทะเบียน',
-    COST_PER_REGISTER:'ค่าใช้จ่ายต่อการลงทะเบียน',
-    COST_PER_ENGAGEMENT:'ค่าใช้จ่ายต่อ Engagement',
-    COST_PER_RESULT:'ค่าใช้จ่ายต่อผลลัพธ์',
-    COST_PER_LANDING_PAGE_VIEW:'ค่าใช้จ่ายต่อ Landing Page View',
-    COST_PER_LINK_CLICK:'ค่าใช้จ่ายต่อ Link Click',
-    CTR:'อัตราการคลิก (CTR)',
-    LINK_CTR:'อัตรา Link Click (Link CTR)',
-    CPC:'ค่าใช้จ่ายต่อคลิก (CPC)',
-    CPM:'ค่าใช้จ่ายต่อ 1,000 Impressions (CPM)',
+    COST_PER_COMPLETE_REGISTER:'Cost / Complete Register',
+    COST_PER_REGISTER:'Cost / Complete Register',
+    COST_PER_ENGAGEMENT:'Cost / Engagement',
+    COST_PER_RESULT:'Cost / Result',
+    COST_PER_LPV:'Cost / Landing Page View',
+    COST_PER_LANDING_PAGE_VIEW:'Cost / Landing Page View',
+    COST_PER_LINK_CLICK:'Cost / Link Click',
+    CTR:'CTR',
+    LINK_CTR:'Link CTR',
+    CVR_LPV_TO_REG:'CVR LPV → Register',
+    FREQUENCY:'Frequency',
+    CPC:'CPC',
+    CPM:'CPM',
     RESULTS:'จำนวนผลลัพธ์',
-    COMPLETE_REGISTER:'จำนวนลงทะเบียนสำเร็จ',
+    COMPLETE_REGISTER:'Complete Register',
     LANDING_PAGE_VIEWS:'Landing Page Views',
-    SPEND:'ค่าใช้จ่าย',
-    GOOGLE_CPA:'ค่าใช้จ่ายต่อ Google Ads Conversion',
-    GOOGLE_CONVERSIONS:'Google Ads Conversions'
+    SPEND:'Spend',
+    GOOGLE_CPA:'Google Ads CPA',
+    GOOGLE_CONVERSIONS:'Google Ads Conversions',
+    TREND:'Trend (Legacy)'
   });
 
   const statusLabel = (value) => STATUS_LABELS[upper(value)] || clean(value).replace(/_/g,' ') || '-';
@@ -91,6 +95,77 @@
   const metricLabel = (value) => METRIC_LABELS[upper(value)] || clean(value).replace(/_/g,' ') || '-';
   const hasValue = (value) => value !== '' && value !== null && value !== undefined && Number.isFinite(Number(String(value).replace(/,/g,'')));
   const toNumber = (value) => hasValue(value) ? Number(String(value).replace(/,/g,'')) : null;
+
+  const COST_METRICS = new Set([
+    'COST_PER_COMPLETE_REGISTER','COST_PER_REGISTER','COST_PER_ENGAGEMENT','COST_PER_RESULT',
+    'COST_PER_LPV','COST_PER_LANDING_PAGE_VIEW','COST_PER_LINK_CLICK','CPC','CPM','GOOGLE_CPA'
+  ]);
+  const HIGHER_IS_BETTER_METRICS = new Set(['CTR','LINK_CTR','CVR_LPV_TO_REG','GOOGLE_CONVERSIONS','RESULTS','COMPLETE_REGISTER','LANDING_PAGE_VIEWS']);
+
+  function metricDirection(metric, explicit){
+    const direct=upper(explicit);
+    if(direct==='HIGHER_IS_BETTER'||direct==='LOWER_IS_BETTER')return direct;
+    const key=upper(metric);
+    if(HIGHER_IS_BETTER_METRICS.has(key))return 'HIGHER_IS_BETTER';
+    return 'LOWER_IS_BETTER';
+  }
+
+  function directionLabel(metric, explicit){
+    return metricDirection(metric,explicit)==='HIGHER_IS_BETTER'?'↑ ค่านี้ยิ่งสูงยิ่งดี':'↓ ค่านี้ยิ่งต่ำยิ่งดี';
+  }
+
+  function formatMetricValue(metric,value){
+    if(!hasValue(value))return '-';
+    const key=upper(metric),n=toNumber(value);
+    if(COST_METRICS.has(key))return money(n);
+    if(key==='CTR'||key==='LINK_CTR'||key==='CVR_LPV_TO_REG')return `${num(n*100,2)}%`;
+    if(key==='GOOGLE_CONVERSIONS'||key==='RESULTS'||key==='COMPLETE_REGISTER'||key==='LANDING_PAGE_VIEWS')return num(n,0);
+    return num(n,2);
+  }
+
+  const ISSUE_TITLES = Object.freeze({
+    HIGH_COST_PER_REGISTER:'ต้นทุนต่อการลงทะเบียนสูงกว่าระดับที่ควรเป็น',
+    HIGH_COST_PER_COMPLETE_REGISTER:'ต้นทุนต่อการลงทะเบียนสูงกว่าระดับที่ควรเป็น',
+    HIGH_COST_PER_ENGAGEMENT:'ต้นทุนต่อ Engagement สูงกว่าระดับที่ควรเป็น',
+    HIGH_COST_PER_LPV:'ต้นทุนต่อ Landing Page View สูงกว่าระดับที่ควรเป็น',
+    HIGH_CPM:'ต้นทุนต่อ 1,000 Impressions สูงกว่าระดับที่ควรเป็น',
+    HIGH_FREQUENCY:'Frequency สูง ควรตรวจความถี่ในการเห็นโฆษณา',
+    LOW_CTR:'CTR ต่ำกว่าระดับที่ควรเป็น',
+    LOW_CVR_LPV_TO_REG:'Conversion Rate จาก Landing Page View ไป Register ต่ำ',
+    NEGATIVE_TREND:'แนวโน้ม Performance แย่ลงต่อเนื่อง',
+    GOOGLE_CPA_WORSENING:'Google Ads CPA 7 วันล่าสุดสูงขึ้น',
+    GOOGLE_NO_CONVERSION_7D:'มี Spend แต่ไม่เกิด Google Ads Conversions ใน 7 วันล่าสุด',
+    GOOGLE_SCALE_SIGNAL:'พบ Campaign ที่มีสัญญาณพร้อมพิจารณา Scale'
+  });
+
+  function issueTitle(row){
+    const type=upper(row?.Issue_Type);
+    if(ISSUE_TITLES[type])return ISSUE_TITLES[type];
+    if(type.includes('TREND'))return 'แนวโน้ม Performance แย่ลงต่อเนื่อง';
+    if(type.includes('FREQUENCY'))return 'Frequency สูง ควรตรวจความถี่ในการเห็นโฆษณา';
+    if(type.includes('CTR'))return 'CTR ต่ำกว่าระดับที่ควรเป็น';
+    if(type.includes('ENGAGEMENT')&&type.includes('COST'))return 'ต้นทุนต่อ Engagement สูงกว่าระดับที่ควรเป็น';
+    if(type.includes('LPV')&&type.includes('COST'))return 'ต้นทุนต่อ Landing Page View สูงกว่าระดับที่ควรเป็น';
+    if((type.includes('REGISTER')||type.includes('CPA'))&&type.includes('COST'))return 'ต้นทุนต่อการลงทะเบียนสูงกว่าระดับที่ควรเป็น';
+    if(type.includes('GOOGLE')&&type.includes('CPA'))return 'Google Ads CPA สูงขึ้นเมื่อเทียบช่วงก่อนหน้า';
+    return row?.Issue_Status==='OPPORTUNITY'?'โอกาสที่ระบบพบและควรพิจารณา':'Performance มีสัญญาณที่ควรตรวจสอบ';
+  }
+
+  function isLegacyTrend(row){
+    return upper(row?.Baseline_Metric)==='TREND'||(upper(row?.Issue_Type)==='NEGATIVE_TREND'&&upper(row?.Baseline_Metric)==='TREND');
+  }
+
+  function outcomeExplanation(metric,direction,status,change){
+    const label=metricLabel(metric),dir=metricDirection(metric,direction),s=upper(status),n=toNumber(change);
+    if(s==='INCONCLUSIVE')return `ยังมีข้อมูลไม่เพียงพอที่จะสรุปผลของ ${label}`;
+    if(s==='PENDING')return `กำลังรอข้อมูลเพื่อประเมิน ${label}`;
+    const movement=n===null?'':`${n>0?'เพิ่มขึ้น':n<0?'ลดลง':'เปลี่ยนแปลง'} ${num(Math.abs(n),2)}%`;
+    const why=dir==='HIGHER_IS_BETTER'?'KPI นี้ยิ่งสูงยิ่งดี':'KPI นี้ยิ่งต่ำยิ่งดี';
+    if(s==='IMPROVED')return `${label}${movement?` ${movement}`:''} → ดีขึ้น เพราะ${why}`;
+    if(s==='WORSE')return `${label}${movement?` ${movement}`:''} → แย่ลง เพราะ${why}`;
+    if(s==='STABLE')return `${label}${movement?` ${movement}`:''} → ยังใกล้เคียงเดิม (${why})`;
+    return `${label} • ${why}`;
+  }
 
   function statusClass(value){const v=upper(value);if(v==='CRITICAL'||v==='WORSE')return 'critical';if(v==='WATCH'||v==='PENDING'||v==='INCONCLUSIVE')return 'watch';if(v==='IMPROVED')return 'improved';if(v==='STABLE')return 'stable';return v.toLowerCase().replace(/_/g,'-');}
   function changeLabel(status, change){
@@ -140,14 +215,40 @@
     const platform=upper(row.Platform||'META');
     const priority=row.Priority_Score!==null&&row.Priority_Score!==undefined&&row.Priority_Score!==''?`<span class="issue-badge watch">ลำดับความสำคัญ ${num(row.Priority_Score)}</span>`:'';
     const context=[row.Game_Name||row.Game_ID,row.Account_Name||row.Account_ID,row.Objective,row.Phase].filter(Boolean).join(' · ');
-    const heading=status==='OPPORTUNITY'?'โอกาสที่พบ':'ประเด็นที่พบ';
-    return `<article class="decision-card is-${status.toLowerCase()}"><div class="decision-head"><div class="decision-title"><h3>${esc(row.Entity_Name||'-')}</h3><p>${esc(context)}</p></div><div class="badge-row"><span class="issue-badge">${esc(platform)}</span><span class="issue-badge ${statusClass(status)}">${esc(statusLabel(status))}</span>${priority}${active?'<span class="action-status">มี Action แล้ว</span>':''}</div></div><div class="decision-reason"><strong>${heading}</strong><br/>${esc(row.Issue_Reason||'-')}</div><div class="decision-recommendation"><strong>${platform==='GOOGLE'?'คำแนะนำจาก Google Intelligence':'คำแนะนำจาก AI'}</strong>${esc(row.AI_Recommendation||'-')}</div>${similarCases(row.similar_cases)}<div class="decision-actions"><button class="button-primary" data-record="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">${active?'บันทึกแล้ว':'บันทึก Action'}</button><button class="button-danger-ghost" data-dismiss="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">ไม่ดำเนินการ</button></div></article>`;
+    const problemTitle=issueTitle(row);
+    const heading=status==='OPPORTUNITY'?'💡 โอกาสที่ระบบพบ':'⚠️ ปัญหาที่ระบบพบ';
+    return `<article class="decision-card is-${status.toLowerCase()}">
+      <div class="decision-head">
+        <div class="decision-title"><h3>${esc(row.Entity_Name||'-')}</h3><p>${esc(context)}</p></div>
+        <div class="badge-row"><span class="issue-badge">${esc(platform)}</span><span class="issue-badge ${statusClass(status)}">${esc(statusLabel(status))}</span>${priority}${active?'<span class="action-status">มี Action แล้ว</span>':''}</div>
+      </div>
+      <div class="problem-panel">
+        <span class="problem-eyebrow">${heading}</span>
+        <strong class="problem-title">${esc(problemTitle)}</strong>
+        <div class="problem-evidence"><span>รายละเอียดที่ตรวจพบ</span><p>${esc(row.Issue_Reason||'-')}</p></div>
+      </div>
+      <div class="decision-recommendation"><strong>${platform==='GOOGLE'?'คำแนะนำจาก Google Intelligence':'คำแนะนำจาก AI'}</strong>${esc(row.AI_Recommendation||'-')}</div>
+      ${similarCases(row.similar_cases)}
+      <div class="decision-actions"><button class="button-primary" data-record="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">${active?'บันทึกแล้ว':'บันทึก Action'}</button><button class="button-danger-ghost" data-dismiss="${esc(row.Decision_Key)}" ${(!row.can_manage||active)?'disabled':''} type="button">ไม่ดำเนินการ</button></div>
+    </article>`;
   }
 
-  function checkpoint(label,metric,review){
+  function checkpoint(label,metric,direction,review,legacy=false){
     const ready=clean(review.date)!=='';
-    const valueText=review.value!==null?num(review.value,2):'-';
-    return `<div class="checkpoint is-${statusClass(review.status)}"><div class="checkpoint-label">${esc(label)}</div>${ready?`<div class="checkpoint-date">${dateText(review.date)}</div><div class="checkpoint-value"><span>${esc(metricLabel(metric))}</span><strong>${valueText}</strong></div><span class="outcome-badge ${statusClass(review.status)}">${esc(changeLabel(review.status,review.change))}</span>`:'<div class="checkpoint-waiting">รอครบกำหนดประเมิน</div>'}</div>`;
+    if(legacy&&ready){
+      return `<div class="checkpoint is-watch"><div class="checkpoint-label">${esc(label)}</div><div class="checkpoint-date">${dateText(review.date)}</div><div class="legacy-metric-note"><strong>ข้อมูล Legacy</strong><span>Action นี้ถูกสร้างก่อนระบบเปลี่ยนจาก Trend เป็น KPI จริง จึงไม่ใช้ตัวเลขเดิมเพื่อสรุปผล</span></div></div>`;
+    }
+    const valueText=formatMetricValue(metric,review.value);
+    const explain=ready?outcomeExplanation(metric,direction,review.status,review.change):'';
+    return `<div class="checkpoint is-${statusClass(review.status)}">
+      <div class="checkpoint-label">${esc(label)}</div>
+      ${ready?`
+        <div class="checkpoint-date">${dateText(review.date)}</div>
+        <div class="checkpoint-value"><span>${esc(metricLabel(metric))}</span><strong>${esc(valueText)}</strong></div>
+        <span class="outcome-badge ${statusClass(review.status)}">${esc(changeLabel(review.status,review.change))}</span>
+        <p class="checkpoint-explanation">${esc(explain)}</p>
+      `:'<div class="checkpoint-waiting">รอครบกำหนดประเมิน</div>'}
+    </div>`;
   }
 
   function outcomeNote(reason){
@@ -164,12 +265,29 @@
     if(outcome==='PENDING')return `<section class="outcome-summary is-pending"><div class="outcome-summary-head"><div><span class="eyebrow">สรุปผลหลังทำ Action</span><h4>กำลังรอข้อมูล</h4></div><span class="outcome-badge pending">รอผล</span></div><p class="outcome-pending-text">ระบบจะสรุปผลเมื่อมีข้อมูลครบตามรอบ 1 / 3 / 7 วัน</p></section>`;
 
     const review7=reviewData(row,7);
+    const legacy=isLegacyTrend(row);
+    if(legacy){
+      return `<section class="outcome-summary is-watch"><div class="outcome-summary-head"><div><span class="eyebrow">สรุปผล Action เก่า</span><h4>ไม่ใช้ค่า Trend เดิมเพื่อสรุป KPI</h4></div><span class="outcome-badge watch">Legacy Data</span></div><div class="legacy-outcome-warning"><strong>เหตุผล</strong><p>Action นี้ถูกบันทึกก่อนปรับระบบ Outcome ให้ติดตาม KPI จริงตาม Objective ตัวเลข Trend เดิมจึงไม่ควรตีความว่าเป็นต้นทุนหรือ Performance KPI หลัง Action</p></div></section>`;
+    }
+
     const baseline=hasValue(row.Baseline_Value)?toNumber(row.Baseline_Value):null;
-    const metric=metricLabel(row.Baseline_Metric);
+    const metric=row.Baseline_Metric;
+    const metricText=metricLabel(metric);
+    const direction=metricDirection(metric,row.Metric_Direction);
     const resultText=outcome==='IMPROVED'?'ผลหลัง Action ดีขึ้นเมื่อเทียบกับช่วงก่อนทำ':outcome==='WORSE'?'ผลหลัง Action แย่ลงเมื่อเทียบกับช่วงก่อนทำ':outcome==='STABLE'?'ผลหลัง Action ใกล้เคียงกับช่วงก่อนทำ':'ข้อมูลช่วงหลัง Action ยังไม่เพียงพอสำหรับสรุปว่าดีขึ้นหรือแย่ลง';
     const spendText=review7.spend!==null?money(review7.spend):'-';
     const resultsText=review7.results!==null?num(review7.results):'-';
-    return `<section class="outcome-summary is-${statusClass(outcome)}"><div class="outcome-summary-head"><div><span class="eyebrow">สรุปผลหลังทำ Action</span><h4>${esc(resultText)}</h4></div><span class="outcome-badge ${statusClass(outcome)}">${esc(statusLabel(outcome))}</span></div><div class="outcome-result-grid"><div class="outcome-result-item"><span>ตัวชี้วัด</span><strong>${esc(metric)}</strong></div><div class="outcome-result-item"><span>ก่อนทำ → หลัง 7 วัน</span><strong>${baseline!==null?num(baseline,2):'-'} → ${review7.value!==null?num(review7.value,2):'-'}</strong></div><div class="outcome-result-item"><span>การเปลี่ยนแปลง</span><strong>${esc(changeLabel(outcome,review7.change))}</strong></div><div class="outcome-result-item"><span>ข้อมูลช่วง 7 วัน</span><strong>Spend ${spendText} · Results ${resultsText}</strong></div></div><div class="outcome-interpretation"><strong>ข้อควรเข้าใจ</strong><p>${esc(outcomeNote(row.Outcome_Reason))}</p></div></section>`;
+    const explain=outcomeExplanation(metric,direction,outcome,review7.change);
+    return `<section class="outcome-summary is-${statusClass(outcome)}">
+      <div class="outcome-summary-head"><div><span class="eyebrow">สรุปผลหลังทำ Action</span><h4>${esc(resultText)}</h4></div><span class="outcome-badge ${statusClass(outcome)}">${esc(statusLabel(outcome))}</span></div>
+      <div class="outcome-result-grid">
+        <div class="outcome-result-item"><span>KPI ที่ใช้วัด</span><strong>${esc(metricText)}</strong><small>${esc(directionLabel(metric,direction))}</small></div>
+        <div class="outcome-result-item"><span>ก่อนทำ → หลัง 7 วัน</span><strong>${esc(formatMetricValue(metric,baseline))} → ${esc(formatMetricValue(metric,review7.value))}</strong></div>
+        <div class="outcome-result-item"><span>การเปลี่ยนแปลง</span><strong>${esc(changeLabel(outcome,review7.change))}</strong><small>${esc(explain)}</small></div>
+        <div class="outcome-result-item"><span>ข้อมูลช่วง 7 วัน</span><strong>Spend ${spendText} · Results ${resultsText}</strong></div>
+      </div>
+      <div class="outcome-interpretation"><strong>ข้อควรเข้าใจ</strong><p>${esc(outcomeNote(row.Outcome_Reason))}</p></div>
+    </section>`;
   }
 
   function actionCard(row){
@@ -177,6 +295,10 @@
     const platform=upper(row.Platform||(upper(row.Action_Source).startsWith('GOOGLE')?'GOOGLE':'META'));
     const review1=reviewData(row,1),review3=reviewData(row,3),review7=reviewData(row,7);
     const isClosed=status==='CLOSED';
+    const legacy=isLegacyTrend(row);
+    const metric=row.Baseline_Metric||row.Issue_Metric;
+    const direction=metricDirection(metric,row.Metric_Direction);
+    const problemTitle=issueTitle(row);
     const actionButtons=[
       ...(['PLANNED'].includes(status)?[`<button class="button-primary" data-update="${esc(row.Action_ID)}" data-status="IN_PROGRESS" type="button">เริ่มดำเนินการ</button>`]:[]),
       ...(['OUTCOME_READY'].includes(status)?[`<button class="button-primary" data-update="${esc(row.Action_ID)}" data-status="CLOSED" type="button">ตรวจผลแล้วและปิด Action</button>`]:[]),
@@ -201,22 +323,31 @@
           <span class="action-details-chevron" aria-hidden="true">⌄</span>
         </summary>
         <div class="action-details-body">
+          <div class="problem-panel action-problem-panel">
+            <span class="problem-eyebrow">⚠️ ปัญหาที่ Action นี้กำลังแก้</span>
+            <strong class="problem-title">${esc(problemTitle)}</strong>
+            <div class="problem-evidence"><span>เหตุผลที่ระบบตรวจพบ</span><p>${esc(row.Issue_Reason||'-')}</p></div>
+          </div>
           <div class="action-context">
             <div class="action-context-main">
               <span>สิ่งที่ทีมดำเนินการ</span>
               <strong>${esc(row.Action_Detail||'-')}</strong>
             </div>
             <div class="baseline-grid">
-              <div><span>ตัวชี้วัดก่อนทำ</span><strong>${esc(metricLabel(row.Baseline_Metric))} ${hasValue(row.Baseline_Value)?num(row.Baseline_Value,2):'-'}</strong></div>
+              <div>
+                <span>Baseline ก่อนเริ่ม Action</span>
+                <strong>${esc(metricLabel(metric))} ${esc(formatMetricValue(metric,row.Baseline_Value))}</strong>
+                <small>${legacy?'ข้อมูล Legacy — ไม่ใช้ Trend เดิมสรุป KPI':esc(directionLabel(metric,direction))}</small>
+              </div>
               <div><span>ข้อมูลช่วง Baseline</span><strong>Spend ${money(row.Baseline_Spend||0)} · ${platform==='GOOGLE'?'Google Ads Conversions':'Results'} ${num(row.Baseline_Results||0)}</strong></div>
             </div>
           </div>
           <div class="checkpoint-section">
             <div class="section-label">ผลตามช่วงเวลาหลังทำ Action</div>
             <div class="action-progress">
-              ${checkpoint('หลัง 1 วัน',row.Baseline_Metric,review1)}
-              ${checkpoint('หลัง 3 วัน',row.Baseline_Metric,review3)}
-              ${checkpoint('หลัง 7 วัน',row.Baseline_Metric,review7)}
+              ${checkpoint('หลัง 1 วัน',metric,direction,review1,legacy)}
+              ${checkpoint('หลัง 3 วัน',metric,direction,review3,legacy)}
+              ${checkpoint('หลัง 7 วัน',metric,direction,review7,legacy)}
             </div>
           </div>
           ${outcomeSummary(row)}
@@ -277,7 +408,7 @@
     bindDynamic();
   }
   function bindDynamic(){document.querySelectorAll('[data-record]').forEach(b=>b.addEventListener('click',()=>selectDecision(b.dataset.record)));document.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',()=>dismissDecision(b.dataset.dismiss)));document.querySelectorAll('[data-update]').forEach(b=>b.addEventListener('click',()=>updateAction(b.dataset.update,b.dataset.status)));}
-  function selectDecision(key){const row=(state.data?.decisions||[]).find(r=>r.Decision_Key===key);if(!row)return;state.selected=row;$('selectedIssue').innerHTML=`<strong>${esc(row.Entity_Name)}</strong><p>${esc(row.Issue_Status)} · ${esc(row.Issue_Reason)}</p>`;$('actionDate').value=todayBangkok();$('saveActionButton').disabled=!row.can_manage;$('actionMessage').textContent='';window.scrollTo({top:document.body.scrollHeight/4,behavior:'smooth'});}
+  function selectDecision(key){const row=(state.data?.decisions||[]).find(r=>r.Decision_Key===key);if(!row)return;state.selected=row;$('selectedIssue').innerHTML=`<strong>${esc(row.Entity_Name)}</strong><p><b>ปัญหาที่พบ:</b> ${esc(issueTitle(row))}<br/><span>${esc(row.Issue_Reason||'-')}</span></p>`;$('actionDate').value=todayBangkok();$('saveActionButton').disabled=!row.can_manage;$('actionMessage').textContent='';window.scrollTo({top:document.body.scrollHeight/4,behavior:'smooth'});}
   function clearSelection(){state.selected=null;$('selectedIssue').innerHTML='<strong>ยังไม่ได้เลือกปัญหา</strong><p>กด “บันทึก Action” จากรายการด้านซ้าย</p>';$('actionForm').reset();$('actionOwner').value=localStorage.getItem('display_name')||localStorage.getItem('username')||'';$('saveActionButton').disabled=true;$('actionMessage').textContent='';}
   function applyMutation(row){if(!row)return;const status=upper(row.Action_Status);let actions=[...(state.data.actions||[])].filter(x=>x.Action_ID!==row.Action_ID);if(!['CANCELLED','DISMISSED'].includes(status))actions.unshift(row);state.data.actions=actions;if(status==='DISMISSED'){state.data.decisions=(state.data.decisions||[]).filter(d=>d.Decision_Key!==row.Decision_Key);}else{const active=!['CANCELLED','CLOSED'].includes(status);state.data.decisions=(state.data.decisions||[]).map(d=>d.Decision_Key===row.Decision_Key?{...d,has_active_action:active}:d);}const s=state.data.summary||{};s.total_actions=actions.length;s.needs_action=(state.data.decisions||[]).filter(d=>!d.has_active_action).length;s.in_progress=actions.filter(a=>['IN_PROGRESS','PENDING_REVIEW'].includes(upper(a.Action_Status))).length;s.outcome_ready=actions.filter(a=>upper(a.Action_Status)==='OUTCOME_READY').length;s.improved=actions.filter(a=>upper(a.Outcome_Status)==='IMPROVED').length;state.data.summary=s;saveCache(state.data);render();}
 

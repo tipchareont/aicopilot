@@ -48,3 +48,24 @@
 .legacy-outcome-warning p{margin:5px 0 0;color:#64748b;font-size:11px;line-height:1.65}
 .selected-issue b{color:#0f172a}
 @media(max-width:760px){.problem-title{font-size:13px}}
+
+
+/* V5.9.1 — Issue Snapshot clarity */
+.issue-snapshot-card{margin-top:12px;padding:14px 15px;border:1px solid #dbeafe;border-radius:12px;background:#f8fbff}
+.issue-snapshot-card.is-watch{border-color:#fde68a;background:#fffbeb}
+.issue-snapshot-card.is-critical{border-color:#fecaca;background:#fff7f7}
+.issue-snapshot-card.is-improved{border-color:#bbf7d0;background:#f0fdf4}
+.issue-snapshot-card.is-legacy{border-style:dashed;border-color:#cbd5e1;background:#f8fafc}
+.issue-snapshot-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.issue-snapshot-head h4{margin:4px 0 0;color:#0f172a;font-size:13px;line-height:1.45}
+.issue-snapshot-head h4 strong{font-size:18px;margin-left:4px}
+.issue-snapshot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.issue-snapshot-grid>div{padding:10px 11px;border:1px solid rgba(148,163,184,.28);border-radius:10px;background:rgba(255,255,255,.76)}
+.issue-snapshot-grid span,.decision-current-metric span{display:block;color:#64748b;font-size:10px;font-weight:700}
+.issue-snapshot-grid strong,.decision-current-metric strong{display:block;margin-top:4px;color:#0f172a;font-size:13px;line-height:1.45}
+.issue-snapshot-grid small,.decision-current-metric small{display:block;margin-top:4px;color:#64748b;font-size:10px;line-height:1.45}
+.issue-snapshot-reason{margin-top:10px;padding:10px 11px;border-left:3px solid #94a3b8;border-radius:8px;background:rgba(255,255,255,.7)}
+.issue-snapshot-reason strong{display:block;color:#334155;font-size:10px}
+.issue-snapshot-reason p,.issue-snapshot-note{margin:4px 0 0;color:#64748b;font-size:10px;line-height:1.65}
+.decision-current-metric{margin-top:10px;padding:10px 11px;border:1px solid rgba(245,158,11,.28);border-radius:9px;background:#fff}
+@media(max-width:760px){.issue-snapshot-grid{grid-template-columns:1fr}.issue-snapshot-head{flex-direction:column}}

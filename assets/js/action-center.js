@@ -8,8 +8,8 @@
   const money = (value) => `฿${num(value,2)}`;
   const dateText = (value) => { const v=clean(value).slice(0,10); if(!v)return '-'; const [y,m,d]=v.split('-'); return y&&m&&d?`${d}/${m}/${y}`:v; };
   const state = { data:null, selected:null, tab:'decisions', loading:false };
-  const CACHE_VERSION = 8;
-  const cacheKey = () => `ai_marketing_copilot_action_center_v7_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
+  const CACHE_VERSION = 9;
+  const cacheKey = () => `ai_marketing_copilot_action_center_v9_${clean(localStorage.getItem('username')||'user').toLowerCase()}`;
   const todayBangkok = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
   function readCache(){try{const x=JSON.parse(localStorage.getItem(cacheKey())||'null');return Number(x?.version||0)===CACHE_VERSION&&x?.data?x:null}catch{return null}}
@@ -87,7 +87,7 @@
     SPEND:'Spend',
     GOOGLE_CPA:'Google Ads CPA',
     GOOGLE_CONVERSIONS:'Google Ads Conversions',
-    TREND:'Trend (Legacy)'
+    TREND:'Trend 7D'
   });
 
   const statusLabel = (value) => STATUS_LABELS[upper(value)] || clean(value).replace(/_/g,' ') || '-';
@@ -111,7 +111,9 @@
   }
 
   function directionLabel(metric, explicit){
-    return metricDirection(metric,explicit)==='HIGHER_IS_BETTER'?'↑ ค่านี้ยิ่งสูงยิ่งดี':'↓ ค่านี้ยิ่งต่ำยิ่งดี';
+    const direct=upper(explicit);
+    if(direct==='SIGNAL_ONLY')return 'Signal สำหรับระบุปัญหา — ไม่ใช้เป็น KPI วัด Outcome';
+    return metricDirection(metric,explicit)==='HIGHER_IS_BETTER'?'↑ KPI นี้ยิ่งสูงยิ่งดี':'↓ KPI นี้ยิ่งต่ำยิ่งดี';
   }
 
   function formatMetricValue(metric,value){
@@ -131,7 +133,8 @@
     HIGH_CPM:'ต้นทุนต่อ 1,000 Impressions สูงกว่าระดับที่ควรเป็น',
     HIGH_FREQUENCY:'Frequency สูง ควรตรวจความถี่ในการเห็นโฆษณา',
     LOW_CTR:'CTR ต่ำกว่าระดับที่ควรเป็น',
-    LOW_CVR_LPV_TO_REG:'Conversion Rate จาก Landing Page View ไป Register ต่ำ',
+    LOW_CVR:'CVR จาก Landing Page View → Register ต่ำกว่าระดับที่ควรเป็น',
+    LOW_CVR_LPV_TO_REG:'CVR จาก Landing Page View → Register ต่ำกว่าระดับที่ควรเป็น',
     NEGATIVE_TREND:'แนวโน้ม Performance แย่ลงต่อเนื่อง',
     GOOGLE_CPA_WORSENING:'Google Ads CPA 7 วันล่าสุดสูงขึ้น',
     GOOGLE_NO_CONVERSION_7D:'มี Spend แต่ไม่เกิด Google Ads Conversions ใน 7 วันล่าสุด',
@@ -149,6 +152,62 @@
     if((type.includes('REGISTER')||type.includes('CPA'))&&type.includes('COST'))return 'ต้นทุนต่อการลงทะเบียนสูงกว่าระดับที่ควรเป็น';
     if(type.includes('GOOGLE')&&type.includes('CPA'))return 'Google Ads CPA สูงขึ้นเมื่อเทียบช่วงก่อนหน้า';
     return row?.Issue_Status==='OPPORTUNITY'?'โอกาสที่ระบบพบและควรพิจารณา':'Performance มีสัญญาณที่ควรตรวจสอบ';
+  }
+
+  function issueSnapshot(row){
+    const metric=clean(row?.Issue_Snapshot_Metric);
+    const value=hasValue(row?.Issue_Snapshot_Value)?toNumber(row.Issue_Snapshot_Value):null;
+    const date=clean(row?.Issue_Snapshot_Date);
+    const status=upper(row?.Issue_Snapshot_Status||row?.Issue_Status);
+    const direction=upper(row?.Issue_Snapshot_Direction);
+    const compareLabel=clean(row?.Issue_Snapshot_Compare_Label);
+    const compareValue=hasValue(row?.Issue_Snapshot_Compare_Value)?toNumber(row.Issue_Snapshot_Compare_Value):null;
+    const reason=clean(row?.Issue_Snapshot_Reason);
+    return {metric,value,date,status,direction,compareLabel,compareValue,reason,available:!!(metric&&date&&value!==null)};
+  }
+
+  function compareValueText(snapshot){
+    if(snapshot.compareValue===null)return '-';
+    if(upper(snapshot.compareLabel)==='P25')return formatMetricValue(snapshot.metric,snapshot.compareValue);
+    if(upper(snapshot.metric)==='TREND')return num(snapshot.compareValue,2);
+    return formatMetricValue(snapshot.metric,snapshot.compareValue);
+  }
+
+  function issueSnapshotPanel(row){
+    const snap=issueSnapshot(row);
+    if(!snap.available){
+      return `<section class="issue-snapshot-card is-legacy"><div class="issue-snapshot-head"><div><span class="eyebrow">ค่าปัญหา ณ วันที่ระบบแจ้ง</span><h4>ไม่มี Snapshot จากระบบรุ่นเดิม</h4></div><span class="issue-badge watch">Legacy Data</span></div><p class="issue-snapshot-note">Action นี้ถูกสร้างก่อนเพิ่ม Issue Snapshot จึงไม่แสดงตัวเลขย้อนหลังโดยการเดาหรือคำนวณแทนข้อมูลที่ไม่ได้ถูกเก็บไว้</p></section>`;
+    }
+    const metricText=metricLabel(snap.metric);
+    const valueText=formatMetricValue(snap.metric,snap.value);
+    const compareText=snap.compareLabel&&snap.compareValue!==null?compareValueText(snap):'';
+    let relation='';
+    if(snap.compareLabel&&snap.compareValue!==null){
+      if(upper(snap.compareLabel)==='P25'){
+        relation=`${valueText} ${snap.value<snap.compareValue?'&lt;':snap.value>snap.compareValue?'&gt;':'='} ${compareText}`;
+      }else{
+        relation=`${metricText} ${valueText} · ${esc(snap.compareLabel)} ${esc(compareText)}`;
+      }
+    }
+    return `<section class="issue-snapshot-card is-${statusClass(snap.status)}">
+      <div class="issue-snapshot-head">
+        <div><span class="eyebrow">ค่าที่ระบบตรวจพบ • ${dateText(snap.date)}</span><h4>${esc(metricText)} <strong>${esc(valueText)}</strong></h4></div>
+        <span class="issue-badge ${statusClass(snap.status)}">${esc(statusLabel(snap.status))}</span>
+      </div>
+      <div class="issue-snapshot-grid">
+        <div><span>ค่าปัญหา ณ วันที่แจ้ง</span><strong>${esc(valueText)}</strong><small>${esc(directionLabel(snap.metric,snap.direction))}</small></div>
+        ${snap.compareLabel?`<div><span>เกณฑ์ / ค่าเทียบ</span><strong>${esc(snap.compareLabel)}${compareText?` ${esc(compareText)}`:''}</strong>${relation?`<small>${relation}</small>`:''}</div>`:''}
+      </div>
+      ${snap.reason?`<div class="issue-snapshot-reason"><strong>เหตุผลจากระบบ ณ วันนั้น</strong><p>${esc(snap.reason)}</p></div>`:''}
+    </section>`;
+  }
+
+  function currentDecisionMetricPanel(row){
+    const metric=clean(row?.Status_Driver_Metric||row?.Issue_Metric);
+    const value=hasValue(row?.Status_Driver_Value)?toNumber(row.Status_Driver_Value):null;
+    if(!metric||value===null)return '';
+    const direction=metricDirection(metric,row?.Metric_Direction);
+    return `<div class="decision-current-metric"><span>ค่าที่ทำให้ระบบแจ้ง</span><strong>${esc(metricLabel(metric))} ${esc(formatMetricValue(metric,value))}</strong><small>${esc(directionLabel(metric,direction))}</small></div>`;
   }
 
   function isLegacyTrend(row){
@@ -226,6 +285,7 @@
         <span class="problem-eyebrow">${heading}</span>
         <strong class="problem-title">${esc(problemTitle)}</strong>
         <div class="problem-evidence"><span>รายละเอียดที่ตรวจพบ</span><p>${esc(row.Issue_Reason||'-')}</p></div>
+        ${currentDecisionMetricPanel(row)}
       </div>
       <div class="decision-recommendation"><strong>${platform==='GOOGLE'?'คำแนะนำจาก Google Intelligence':'คำแนะนำจาก AI'}</strong>${esc(row.AI_Recommendation||'-')}</div>
       ${similarCases(row.similar_cases)}
@@ -328,6 +388,7 @@
             <strong class="problem-title">${esc(problemTitle)}</strong>
             <div class="problem-evidence"><span>เหตุผลที่ระบบตรวจพบ</span><p>${esc(row.Issue_Reason||'-')}</p></div>
           </div>
+          ${issueSnapshotPanel(row)}
           <div class="action-context">
             <div class="action-context-main">
               <span>สิ่งที่ทีมดำเนินการ</span>
@@ -335,7 +396,7 @@
             </div>
             <div class="baseline-grid">
               <div>
-                <span>Baseline ก่อนเริ่ม Action</span>
+                <span>Baseline ก่อนเริ่ม Action • ${dateText(row.Baseline_Start_Date)}–${dateText(row.Baseline_End_Date)}</span>
                 <strong>${esc(metricLabel(metric))} ${esc(formatMetricValue(metric,row.Baseline_Value))}</strong>
                 <small>${legacy?'ข้อมูล Legacy — ไม่ใช้ Trend เดิมสรุป KPI':esc(directionLabel(metric,direction))}</small>
               </div>
